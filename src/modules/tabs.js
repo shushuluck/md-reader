@@ -4,6 +4,12 @@ import { renderMarkdown, setEditorContent, getEditorContent, isEditing } from '.
 import { showView, updateStatus, updateFileInfo, updateContentStats, showFileChangeToast } from '../main.js';
 
 const tabs = []; // { id, name, path, content, modified }
+
+// Initialize tab system (called from main.js)
+export function initTabs() {
+  // Tab bar drag-drop setup is handled per-tab in renderTabBar()
+  // This function exists for initialization symmetry
+}
 let activeTabId = null;
 let tabIdCounter = 0;
 
