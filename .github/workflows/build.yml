@@ -141,9 +141,12 @@ jobs:
         run: npx tauri android init
 
       - name: Build Android APK
-        uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+        run: npx tauri android build -- --target aarch64-linux-android
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          args: --target aarch64-linux-android --apk
+          name: MDReader-Android-arm64
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
