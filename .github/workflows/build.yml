@@ -1,11 +1,11 @@
-name: Build Windows EXE
+name: Build & Test Windows EXE
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -28,6 +28,40 @@ jobs:
     - name: Build EXE
       run: |
         pyinstaller --noconfirm --onedir --windowed --name "MDReader" main.py
+    
+    - name: Verify build output
+      run: |
+        if (Test-Path "dist/MDReader/MDReader.exe") {
+          Write-Host "✅ MDReader.exe 存在"
+          $size = (Get-Item "dist/MDReader/MDReader.exe").Length / 1MB
+          Write-Host "📦 文件大小: $([math]::Round($size, 2)) MB"
+        } else {
+          Write-Host "❌ MDReader.exe 不存在"
+          exit 1
+        }
+    
+    - name: Test exe launch (no crash)
+      run: |
+        $process = Start-Process "dist/MDReader/MDReader.exe" -PassThru
+        Start-Sleep -Seconds 3
+        if (!$process.HasExited) {
+          Write-Host "✅ 程序启动成功，未崩溃"
+          $process.Kill()
+        } else {
+          Write-Host "❌ 程序启动后立即退出，退出码: $($process.ExitCode)"
+          exit 1
+        }
+    
+    - name: Check required DLLs
+      run: |
+        $required = @("Qt5Core.dll", "Qt5Gui.dll", "Qt5Widgets.dll", "Qt5WebEngine.dll")
+        foreach ($dll in $required) {
+          if (Test-Path "dist/MDReader/$dll") {
+            Write-Host "✅ $dll"
+          } else {
+            Write-Host "❌ $dll 缺失"
+          }
+        }
     
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
