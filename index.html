@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MD Reader</title>
+  <link rel="stylesheet" href="/src/styles/base.css">
+</head>
+<body data-theme="glass">
+  <!-- 标题栏 -->
+  <header class="titlebar" data-tauri-drag-region>
+    <div class="titlebar-left">
+      <button id="btn-menu" class="icon-btn" title="菜单">☰</button>
+      <span class="app-title">MD Reader</span>
+    </div>
+    <div class="titlebar-center" data-tauri-drag-region>
+      <span id="file-name" class="file-name">未打开文件</span>
+    </div>
+    <div class="titlebar-right">
+      <button id="btn-minimize" class="icon-btn win-btn" title="最小化">─</button>
+      <button id="btn-maximize" class="icon-btn win-btn" title="最大化">□</button>
+      <button id="btn-close" class="icon-btn win-btn close" title="关闭">✕</button>
+    </div>
+  </header>
+
+  <!-- 工具栏 -->
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <button id="btn-open" class="tool-btn" title="打开文件 (Ctrl+O)">
+        <span class="icon">📂</span><span class="label">打开</span>
+      </button>
+      <button id="btn-open-folder" class="tool-btn" title="打开文件夹">
+        <span class="icon">📁</span><span class="label">文件夹</span>
+      </button>
+      <button id="btn-save" class="tool-btn" title="保存 (Ctrl+S)" disabled>
+        <span class="icon">💾</span><span class="label">保存</span>
+      </button>
+    </div>
+    <div class="toolbar-divider"></div>
+    <div class="toolbar-group">
+      <button id="btn-edit" class="tool-btn" title="编辑模式 (Ctrl+E)">
+        <span class="icon">✏️</span><span class="label">编辑</span>
+      </button>
+      <button id="btn-outline" class="tool-btn" title="目录大纲 (Ctrl+Shift+O)">
+        <span class="icon">📋</span><span class="label">大纲</span>
+      </button>
+    </div>
+    <div class="toolbar-divider"></div>
+    <div class="toolbar-group search-group">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="搜索... (Ctrl+F)">
+        <button id="btn-search-prev" class="search-nav" title="上一个">▲</button>
+        <button id="btn-search-next" class="search-nav" title="下一个">▼</button>
+        <span id="search-count" class="search-count"></span>
+      </div>
+    </div>
+    <div class="toolbar-spacer"></div>
+    <div class="toolbar-group">
+      <div class="theme-switcher">
+        <button class="theme-btn" data-theme="glass" title="暗黑玻璃">🌙</button>
+        <button class="theme-btn" data-theme="flat" title="简约扁平">☀️</button>
+        <button class="theme-btn" data-theme="paper" title="暖色纸张">📜</button>
+      </div>
+      <button id="btn-sidebar" class="tool-btn" title="文件浏览器 (Ctrl+B)">
+        <span class="icon">📂</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="main-container">
+    <!-- 侧边栏（文件树） -->
+    <aside id="sidebar" class="sidebar hidden">
+      <div class="sidebar-header">
+        <span>文件浏览器</span>
+        <button id="btn-collapse-sidebar" class="icon-btn" title="收起">✕</button>
+      </div>
+      <div id="file-tree" class="file-tree">
+        <div class="empty-hint">打开文件夹浏览文件</div>
+      </div>
+    </aside>
+
+    <!-- 编辑/预览区 -->
+    <div class="editor-area">
+      <!-- 标签栏 -->
+      <div class="tab-bar">
+        <div id="tab-list" class="tab-list"></div>
+        <button id="btn-new-tab" class="tab-add" title="新建标签">+</button>
+      </div>
+
+      <!-- 内容区 -->
+      <div class="content-area">
+        <!-- 欢迎页 -->
+        <div id="welcome" class="welcome">
+          <div class="welcome-icon">📝</div>
+          <h1>Markdown 阅读器</h1>
+          <p>轻量 · 快速 · 多主题</p>
+          <div class="shortcuts">
+            <div class="shortcut-row"><span>打开文件</span><kbd>Ctrl+O</kbd></div>
+            <div class="shortcut-row"><span>编辑模式</span><kbd>Ctrl+E</kbd></div>
+            <div class="shortcut-row"><span>保存</span><kbd>Ctrl+S</kbd></div>
+            <div class="shortcut-row"><span>搜索</span><kbd>Ctrl+F</kbd></div>
+            <div class="shortcut-row"><span>文件浏览器</span><kbd>Ctrl+B</kbd></div>
+            <div class="shortcut-row"><span>目录大纲</span><kbd>Ctrl+Shift+O</kbd></div>
+          </div>
+          <div id="recent-files-section" class="recent-section hidden">
+            <h3>最近打开</h3>
+            <div id="recent-files-list" class="recent-list"></div>
+          </div>
+        </div>
+
+        <!-- 预览区 -->
+        <div id="preview" class="preview hidden">
+          <div id="preview-content" class="preview-content markdown-body"></div>
+        </div>
+
+        <!-- 编辑器 -->
+        <div id="editor" class="editor hidden">
+          <textarea id="editor-textarea" spellcheck="false" placeholder="输入 Markdown..."></textarea>
+        </div>
+      </div>
+
+      <!-- 大纲侧边栏 -->
+      <aside id="outline-panel" class="outline-panel hidden">
+        <div class="outline-header">
+          <span>目录</span>
+          <button id="btn-close-outline" class="icon-btn" title="关闭">✕</button>
+        </div>
+        <div id="outline-content" class="outline-content"></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 状态栏 -->
+  <footer class="statusbar">
+    <div class="status-left">
+      <span id="status-text">就绪</span>
+    </div>
+    <div class="status-right">
+      <span id="status-encoding">UTF-8</span>
+      <span class="divider">│</span>
+      <span id="status-lines">0 行</span>
+      <span class="divider">│</span>
+      <span id="status-words">0 字</span>
+      <span class="divider">│</span>
+      <span id="status-size">0 KB</span>
+      <span class="divider">│</span>
+      <span id="status-read-time">阅读 ~0 分钟</span>
+    </div>
+  </footer>
+
+  <!-- 文件变更提示 -->
+  <div id="file-changed-toast" class="toast hidden">
+    <span>📄 文件已被外部修改</span>
+    <button id="btn-reload" class="toast-btn">重新加载</button>
+    <button id="btn-dismiss-toast" class="toast-btn">忽略</button>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

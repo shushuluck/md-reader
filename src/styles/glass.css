@@ -1,0 +1,81 @@
+/* ===== 暗黑玻璃主题 ===== */
+[data-theme="glass"] {
+  --bg-primary: #1e1e2e;
+  --bg-secondary: #181825;
+  --bg-surface: rgba(30, 30, 46, 0.85);
+  --bg-glass: rgba(49, 50, 68, 0.6);
+  --bg-hover: rgba(69, 71, 90, 0.4);
+  --bg-active: rgba(89, 91, 110, 0.5);
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-muted: #6c7086;
+  --accent: #89b4fa;
+  --accent-hover: #74c7ec;
+  --border: rgba(69, 71, 90, 0.5);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --code-bg: #11111b;
+  --code-text: #cdd6f4;
+  --scrollbar-thumb: rgba(137, 180, 250, 0.3);
+  --tab-active-bg: rgba(137, 180, 250, 0.1);
+  --tab-active-border: #89b4fa;
+  --toast-bg: rgba(30, 30, 46, 0.95);
+  --toast-btn-bg: rgba(137, 180, 250, 0.2);
+  --blockquote-border: #89b4fa;
+  --link-color: #89dceb;
+  --table-border: rgba(69, 71, 90, 0.6);
+  --table-header-bg: rgba(49, 50, 68, 0.8);
+  --hr-color: rgba(69, 71, 90, 0.5);
+  --h-border: rgba(69, 71, 90, 0.4);
+  --outline-active: rgba(137, 180, 250, 0.15);
+  color-scheme: dark;
+}
+
+[data-theme="glass"] { background: var(--bg-primary); color: var(--text-primary); }
+
+[data-theme="glass"] .titlebar { background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
+[data-theme="glass"] .toolbar { background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
+[data-theme="glass"] .tool-btn:hover { background: var(--bg-hover); }
+[data-theme="glass"] .search-box { background: var(--bg-glass); border: 1px solid var(--border); }
+[data-theme="glass"] .search-box input::placeholder { color: var(--text-muted); }
+[data-theme="glass"] .search-nav:hover { background: var(--bg-hover); }
+[data-theme="glass"] .theme-btn { color: var(--text-secondary); }
+[data-theme="glass"] .theme-btn.active { color: var(--accent); }
+[data-theme="glass"] .sidebar { background: var(--bg-secondary); border-right: 1px solid var(--border); }
+[data-theme="glass"] .sidebar-header { border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+[data-theme="glass"] .tree-item:hover { background: var(--bg-hover); }
+[data-theme="glass"] .tab-bar { background: var(--bg-secondary); border-bottom: 1px solid var(--border); }
+[data-theme="glass"] .tab { color: var(--text-secondary); border-right-color: var(--border); }
+[data-theme="glass"] .tab:hover { background: var(--bg-hover); }
+[data-theme="glass"] .tab.active { color: var(--text-primary); background: var(--tab-active-bg); border-bottom: 2px solid var(--tab-active-border); }
+[data-theme="glass"] .tab .tab-close:hover { background: var(--bg-active); }
+[data-theme="glass"] .tab .tab-modified { background: var(--accent); }
+[data-theme="glass"] .tab-add { color: var(--text-muted); }
+[data-theme="glass"] .tab-add:hover { color: var(--text-primary); background: var(--bg-hover); }
+[data-theme="glass"] .welcome { background: var(--bg-primary); color: var(--text-secondary); }
+[data-theme="glass"] .welcome h1 { color: var(--text-primary); }
+[data-theme="glass"] kbd { background: var(--bg-glass); border: 1px solid var(--border); color: var(--text-secondary); }
+[data-theme="glass"] .recent-item { color: var(--text-secondary); }
+[data-theme="glass"] .recent-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+[data-theme="glass"] .preview { background: var(--bg-primary); }
+[data-theme="glass"] .preview-content h1, [data-theme="glass"] .preview-content h2 { border-bottom-color: var(--h-border); }
+[data-theme="glass"] .preview-content a { color: var(--link-color); }
+[data-theme="glass"] .preview-content blockquote { border-left-color: var(--blockquote-border); background: var(--bg-glass); }
+[data-theme="glass"] .preview-content th, [data-theme="glass"] .preview-content td { border-color: var(--table-border); }
+[data-theme="glass"] .preview-content th { background: var(--table-header-bg); }
+[data-theme="glass"] .preview-content hr { border-top-color: var(--hr-color); }
+[data-theme="glass"] .preview-content code { background: var(--bg-glass); color: var(--accent); }
+[data-theme="glass"] .preview-content pre { background: var(--code-bg); }
+[data-theme="glass"] .preview-content pre code { background: transparent; color: var(--code-text); }
+[data-theme="glass"] .code-copy-btn { background: var(--bg-glass); color: var(--text-secondary); border: 1px solid var(--border); }
+[data-theme="glass"] .editor textarea { background: var(--bg-primary); color: var(--text-primary); }
+[data-theme="glass"] .outline-panel { background: var(--bg-secondary); border-left: 1px solid var(--border); }
+[data-theme="glass"] .outline-header { border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+[data-theme="glass"] .outline-item { color: var(--text-secondary); }
+[data-theme="glass"] .outline-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+[data-theme="glass"] .outline-item.active { background: var(--outline-active); color: var(--accent); }
+[data-theme="glass"] .statusbar { background: var(--bg-secondary); border-top: 1px solid var(--border); color: var(--text-muted); }
+[data-theme="glass"] .toast { background: var(--toast-bg); border: 1px solid var(--border); backdrop-filter: blur(12px); }
+[data-theme="glass"] .toast-btn { background: var(--toast-btn-bg); color: var(--accent); }
+[data-theme="glass"] .toast-btn:hover { background: rgba(137, 180, 250, 0.3); }
+[data-theme="glass"] ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
+[data-theme="glass"] ::selection { background: rgba(137, 180, 250, 0.3); }
