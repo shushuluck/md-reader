@@ -1,138 +1,138 @@
-# 📝 MDReader - Markdown Reader for Windows
+# 📝 MDReader - Windows Markdown 阅读器
 
-A lightweight Markdown viewer for Windows, built with PyQt5 and QWebEngineView.
+轻量级 Markdown 文件阅读器，基于 PyQt5 + QWebEngineView 构建。
 
-## ✨ Features
+## ✨ 功能特性
 
-- **Full Markdown Rendering** - Tables, fenced code blocks, blockquotes, lists, images
-- **Syntax Highlighting** - Python, C, JavaScript, SCL and 100+ languages
-- **File Tree Browser** - Browse and open files from sidebar
-- **Dark/Light Theme** - One-click theme switching
-- **In-page Search** - Ctrl+F to find text instantly
-- **Export HTML** - Save rendered document as HTML
-- **Recent Files** - Quick access to last 20 opened files
-- **Drag & Drop** - Drag .md files to open
-- **File Association** - Associate .md files to open with MDReader
-- **Multi-encoding** - Auto-detect UTF-8, GBK, GB2312
+- **完整 Markdown 渲染** - 表格、代码块、引用、列表、图片
+- **代码语法高亮** - 支持 Python、C、JavaScript、SCL 等 100+ 种语言
+- **文件目录树** - 左侧文件浏览器，点击即可打开
+- **亮色/暗色主题** - 一键切换，护眼阅读
+- **页面内搜索** - Ctrl+F 快速查找文本
+- **导出 HTML** - 将渲染后的文档导出为网页
+- **最近打开文件** - 快速访问最近 20 个文件
+- **拖拽打开** - 直接拖放 .md 文件到窗口
+- **文件关联** - 双击 .md 文件直接打开
+- **多编码支持** - 自动检测 UTF-8、GBK、GB2312
 
-## 📸 Screenshots
+## 📸 截图
 
-> TODO: Add screenshots here
+> TODO: 添加截图
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### Option 1: Run from Source
+### 方式一：源码运行
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/md-reader.git
+# 克隆仓库
+git clone https://github.com/shushuluck/md-reader.git
 cd md-reader
 
-# Install dependencies
+# 安装依赖
 pip install -r requirements.txt
 
-# Run
+# 运行
 python main.py
 ```
 
-### Option 2: Build Executable
+### 方式二：打包为可执行文件
 
 ```bash
-# Install dependencies and PyInstaller
+# 安装依赖和 PyInstaller
 pip install -r requirements.txt pyinstaller
 
-# Build
+# 打包
 build.bat
 
-# Run
+# 运行
 dist\MDReader\MDReader.exe
 ```
 
-### Option 3: Create Installer
+### 方式三：制作安装包
 
-1. Install [Inno Setup 6](https://jrsoftware.org/isinfo.php)
-2. Run `build_installer.bat`
-3. Find installer at `installer_output\MDReader_Setup_1.0.0.exe`
+1. 安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)
+2. 运行 `build_installer.bat`
+3. 安装包位于 `installer_output\MDReader_Setup_1.0.0.exe`
 
-## ⌨️ Keyboard Shortcuts
+## ⌨️ 快捷键
 
-| Shortcut | Action |
-|:---------|:-------|
-| `Ctrl+O` | Open file |
-| `Ctrl+Shift+O` | Open folder |
-| `Ctrl+W` | Close document |
-| `Ctrl+F` | Search in page |
-| `Ctrl+T` | Toggle theme |
-| `Ctrl+B` | Toggle sidebar |
-| `F5` | Reload file |
-| `Ctrl++` | Zoom in |
-| `Ctrl+-` | Zoom out |
-| `Ctrl+0` | Reset zoom |
-| `Esc` | Clear search |
+| 快捷键 | 功能 |
+|:-------|:-----|
+| `Ctrl+O` | 打开文件 |
+| `Ctrl+Shift+O` | 打开文件夹 |
+| `Ctrl+W` | 关闭文档 |
+| `Ctrl+F` | 搜索 |
+| `Ctrl+T` | 切换主题 |
+| `Ctrl+B` | 显示/隐藏目录树 |
+| `F5` | 重新加载 |
+| `Ctrl++` | 放大 |
+| `Ctrl+-` | 缩小 |
+| `Ctrl+0` | 重置缩放 |
+| `Esc` | 清除搜索 |
 
-## 📦 Dependencies
+## 📦 依赖库
 
-| Package | Version | Purpose |
-|:--------|:--------|:--------|
-| PyQt5 | 5.15+ | GUI Framework |
-| PyQtWebEngine | 5.15+ | Web Rendering Engine |
-| markdown | 3.7+ | Markdown Parser |
-| Pygments | 2.18+ | Syntax Highlighting |
+| 库 | 版本 | 用途 |
+|:---|:-----|:-----|
+| PyQt5 | 5.15+ | GUI 框架 |
+| PyQtWebEngine | 5.15+ | Web 渲染引擎 |
+| markdown | 3.7+ | Markdown 解析器 |
+| Pygments | 2.18+ | 代码语法高亮 |
 
-## 🛠️ Build from Source
+## 🛠️ 从源码构建
 
-### Requirements
+### 环境要求
 
 - Python 3.9+
 - Windows 10/11
 
-### Build Steps
+### 构建步骤
 
 ```bash
-# 1. Install dependencies
+# 1. 安装依赖
 pip install PyQt5 PyQtWebEngine markdown Pygments pyinstaller
 
-# 2. Build executable
+# 2. 打包为可执行文件
 python -m PyInstaller --noconfirm --onedir --windowed --name "MDReader" --icon "icon.ico" main.py
 
-# 3. (Optional) Create installer with Inno Setup
-# Open setup.iss in Inno Setup 6 and compile
+# 3. （可选）使用 Inno Setup 制作安装包
+# 在 Inno Setup 6 中打开 setup.iss 并编译
 ```
 
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 md-reader/
-├── main.py              # Main application
-├── requirements.txt     # Python dependencies
-├── build.bat            # Build executable script
-├── build_installer.bat  # Build installer script
-├── setup.iss            # Inno Setup configuration
-├── .gitignore           # Git ignore rules
-├── LICENSE              # MIT License
-└── README.md            # This file
+├── main.py              # 主程序
+├── requirements.txt     # Python 依赖
+├── build.bat            # 打包脚本
+├── build_installer.bat  # 安装包制作脚本
+├── setup.iss            # Inno Setup 配置文件
+├── .gitignore           # Git 忽略规则
+├── LICENSE              # MIT 开源许可证
+└── README.md            # 说明文档
 ```
 
-## 🤝 Contributing
+## 🤝 参与贡献
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+欢迎提交 Pull Request！
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/新功能`)
+3. 提交更改 (`git commit -m '添加新功能'`)
+4. 推送分支 (`git push origin feature/新功能`)
+5. 提交 Pull Request
 
-## 📄 License
+## 📄 开源许可证
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+本项目基于 MIT 许可证开源 - 详见 [LICENSE](LICENSE) 文件
 
-## 🙏 Acknowledgments
+## 🙏 致谢
 
-- [PyQt5](https://www.riverbankcomputing.com/software/pyqt/)
-- [Python-Markdown](https://python-markdown.github.io/)
-- [Pygments](https://pygments.org/)
+- [PyQt5](https://www.riverbankcomputing.com/software/pyqt/) - GUI 框架
+- [Python-Markdown](https://python-markdown.github.io/) - Markdown 解析
+- [Pygments](https://pygments.org/) - 代码高亮
 
 ---
 
-**Made with ❤️ for Markdown lovers**
+**用 ❤️ 为 Markdown 爱好者打造**
