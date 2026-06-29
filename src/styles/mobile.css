@@ -1,0 +1,152 @@
+/* ===== Mobile / Touch Optimizations ===== */
+
+/* Responsive breakpoints */
+@media (max-width: 900px) {
+  /* Stack sidebar below */
+  .sidebar { display: none; }
+  .sidebar.mobile-open {
+    display: flex;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 280px;
+    z-index: 100;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+  }
+  
+  /* Hide outline panel, show in dropdown */
+  .outline-panel { display: none; }
+  
+  /* Compact toolbar */
+  .toolbar .label { display: none; }
+  .toolbar .tool-btn { padding: 6px; }
+  .search-group { flex: 0 1 200px; }
+  
+  /* Tab bar scrollable */
+  .tab { max-width: 140px; padding: 0 8px; font-size: 11px; }
+}
+
+@media (max-width: 600px) {
+  /* Phone layout */
+  .titlebar { height: 44px; padding: 0 12px; }
+  .titlebar-left .app-title { display: none; }
+  
+  /* Toolbar becomes bottom bar on phone */
+  .toolbar {
+    position: fixed;
+    bottom: 24px; left: 0; right: 0;
+    height: 52px;
+    justify-content: space-around;
+    z-index: 50;
+    padding: 0 8px;
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+  }
+  
+  .toolbar-divider { display: none; }
+  .toolbar-spacer { display: none; }
+  .search-group { display: none; }
+  .toolbar-group { gap: 4px; }
+  .tool-btn .label { display: none; }
+  .tool-btn .icon { font-size: 20px; }
+  .tool-btn { padding: 8px 12px; }
+  
+  /* Theme switcher hidden on phone (accessible via menu) */
+  .theme-switcher { display: none; }
+  
+  /* Tab bar at top, compact */
+  .tab-bar { height: 38px; }
+  .tab { max-width: 120px; padding: 0 8px; font-size: 11px; }
+  .tab-add { width: 32px; }
+  
+  /* Content area adjusted for bottom bar */
+  .main-container { padding-bottom: 76px; }
+  .editor-area { height: calc(100vh - 44px - 38px - 24px - 76px); }
+  
+  /* Preview padding smaller */
+  .preview { padding: 12px 16px; }
+  .preview-content { font-size: 15px; line-height: 1.7; }
+  .preview-content h1 { font-size: 1.6em; }
+  .preview-content h2 { font-size: 1.3em; }
+  .preview-content pre code { font-size: 12px; padding: 12px; }
+  
+  /* Editor padding smaller */
+  .editor textarea { padding: 12px 16px; font-size: 15px; }
+  
+  /* Status bar minimal */
+  .statusbar { height: 24px; font-size: 10px; }
+  .status-right .divider:nth-child(n+3),
+  .status-right span:nth-child(n+6) { display: none; }
+  
+  /* Welcome page compact */
+  .welcome-icon { font-size: 48px; }
+  .welcome h1 { font-size: 20px; }
+  .shortcuts { display: none; }
+  .recent-section { width: 100%; padding: 0 16px; }
+  
+  /* Toast at bottom */
+  .toast { bottom: 80px; font-size: 12px; padding: 8px 16px; }
+  
+  /* Larger touch targets */
+  .tree-item { padding: 8px 12px; min-height: 40px; }
+  .outline-item { padding: 8px 12px; min-height: 36px; }
+  .recent-item { padding: 10px 12px; min-height: 44px; }
+  .tab-close { width: 24px; height: 24px; opacity: 0.5 !important; }
+  .search-nav { padding: 6px 10px; }
+  .icon-btn { width: 36px; height: 36px; }
+  .win-btn { width: 40px; height: 36px; }
+}
+
+/* Touch-specific */
+@media (pointer: coarse) {
+  /* Larger tap targets for touch */
+  .tab { min-height: 36px; }
+  .tab-close { width: 28px; height: 28px; }
+  .tool-btn { min-height: 40px; min-width: 40px; }
+  .search-nav { min-width: 36px; min-height: 36px; }
+  .tree-item { min-height: 44px; }
+  .outline-item { min-height: 40px; }
+  
+  /* No hover effects on touch */
+  .tree-item:hover,
+  .outline-item:hover,
+  .recent-item:hover { background: transparent; }
+  
+  /* Active state instead */
+  .tree-item:active,
+  .outline-item:active,
+  .recent-item:active { opacity: 0.7; }
+  
+  /* Scrollbar hidden on touch */
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
+}
+
+/* Mobile overlay for sidebar */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+.mobile-overlay.active { display: block; }
+
+/* Swipe hint animation */
+@keyframes swipeHint {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-20px); }
+  100% { transform: translateX(0); }
+}
+.swipe-hint { animation: swipeHint 0.6s ease-in-out; }
+
+/* Mobile menu button */
+.mobile-menu-btn {
+  display: none;
+  width: 36px; height: 36px;
+  align-items: center; justify-content: center;
+  font-size: 20px; border-radius: 6px;
+}
+@media (max-width: 600px) {
+  .mobile-menu-btn { display: flex; }
+  #btn-sidebar { display: none; }
+}

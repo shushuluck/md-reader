@@ -3,6 +3,7 @@ import './styles/base.css';
 import './styles/glass.css';
 import './styles/flat.css';
 import './styles/paper.css';
+import './styles/mobile.css';
 
 import { initTabs, openFileInTab, getCurrentTab, saveCurrentFile, closeCurrentTab } from './modules/tabs.js';
 import { renderMarkdown, getEditorContent, setEditorContent, isEditing, toggleEditMode } from './modules/renderer.js';
@@ -11,6 +12,7 @@ import { initOutline, toggleOutline, refreshOutline } from './modules/outline.js
 import { loadRecentFiles, addRecentFile } from './modules/recent.js';
 import { initFileTree, toggleSidebar } from './modules/file-tree.js';
 import { initTheme } from './modules/theme.js';
+import { initMobile } from './modules/mobile.js';
 
 // Tauri API (with fallback for browser dev)
 let tauriInvoke = null;
@@ -200,6 +202,7 @@ async function init() {
   const isTauri = await initTauri();
   
   initTheme();
+  initMobile();
   initTabs();
   initSearch();
   initOutline();
