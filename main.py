@@ -1,6 +1,6 @@
 """
 Markdown 阅读器 - PyQt5 版本
-功能：渲染 .md 文件，支持代码高亮、目录树、搜索、主题切换
+功能：渲染 .md 文件，支持代码高亮、搜索、主题切换、编辑模式
 """
 
 import sys
@@ -10,17 +10,17 @@ import markdown
 from pathlib import Path
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QFileDialog, QTreeView,
-    QFileSystemModel, QSplitter, QStatusBar, QMenuBar,
+    QFileSystemModel, QStatusBar, QMenuBar,
     QAction, QToolBar, QLineEdit, QLabel, QWidget,
     QVBoxLayout, QHBoxLayout, QMessageBox, QComboBox,
-    QShortcut, QFrame
+    QShortcut, QFrame, QDialog, QPlainTextEdit, QSplitter
 )
 from PyQt5.QtCore import (
     Qt, QUrl, QDir, QSize, QSettings, QTimer,
-    QFileInfo, pyqtSignal
+    QFileInfo, pyqtSignal, QPoint
 )
 from PyQt5.QtGui import (
-    QIcon, QKeySequence, QFont, QColor, QPalette
+    QIcon, QKeySequence, QFont, QColor, QPalette, QTextCursor
 )
 from PyQt5.QtWebEngineWidgets import (
     QWebEngineView, QWebEngineSettings, QWebEnginePage
@@ -347,6 +347,64 @@ class MarkdownWebPage(QWebEnginePage):
 
 
 # ============================================================
+# 文件浏览器浮动面板
+# ============================================================
+
+class FileBrowserPanel(QWidget):
+    """文件浏览器浮动面板"""
+
+    file_selected = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent, Qt.Window | Qt.WindowStaysOnTopHint)
+        self.setWindowTitle('文件浏览器')
+        self.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.resize(300, 500)
+        self._init_ui()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # 文件系统模型
+        self.fs_model = QFileSystemModel()
+        self.fs_model.setReadOnly(True)
+        self.fs_model.setNameFilterDisables(False)
+        self.fs_model.setNameFilters(['*.md', '*.markdown', '*.txt'])
+
+        # 文件树视图
+        self.tree_view = QTreeView()
+        self.tree_view.setModel(self.fs_model)
+        self.tree_view.setColumnHidden(1, True)  # 隐藏大小列
+        self.tree_view.setColumnHidden(2, True)  # 隐藏类型列
+        self.tree_view.setColumnHidden(3, True)  # 隐藏修改日期列
+        self.tree_view.setHeaderHidden(True)
+        self.tree_view.clicked.connect(self._on_tree_clicked)
+        self.tree_view.setAnimated(True)
+
+        layout.addWidget(self.tree_view)
+
+    def set_root_path(self, folder: str):
+        """设置根目录"""
+        index = self.fs_model.setRootPath(folder)
+        self.tree_view.setRootIndex(index)
+        self.tree_view.scrollToTop()
+
+    def _on_tree_clicked(self, index):
+        """文件树点击事件"""
+        file_path = self.fs_model.filePath(index)
+        if os.path.isfile(file_path) and file_path.endswith(('.md', '.markdown', '.txt')):
+            self.file_selected.emit(file_path)
+
+    def select_file(self, file_path: str):
+        """选中指定文件"""
+        index = self.fs_model.index(file_path)
+        if index.isValid():
+            self.tree_view.setCurrentIndex(index)
+            self.tree_view.scrollTo(index)
+
+
+# ============================================================
 # 主窗口
 # ============================================================
 
@@ -357,14 +415,6 @@ class MarkdownReader(QMainWindow):
     THEME_STYLES = {
         'light': """
             QMainWindow, QWidget { background: #f8f9fa; color: #1a1a2e; }
-            QTreeView {
-                background: #ffffff; color: #1a1a2e;
-                border: 1px solid #e0e0e0; border-radius: 4px;
-                font-size: 13px;
-            }
-            QTreeView::item { padding: 4px 8px; }
-            QTreeView::item:selected { background: #0f3460; color: white; }
-            QTreeView::item:hover { background: #e8f0fe; }
             QToolBar {
                 background: #ffffff; border-bottom: 1px solid #e0e0e0;
                 padding: 4px; spacing: 6px;
@@ -384,18 +434,14 @@ class MarkdownReader(QMainWindow):
             QMenuBar::item:selected { background: #e8f0fe; }
             QMenu { background: white; border: 1px solid #ddd; }
             QMenu::item:selected { background: #e8f0fe; }
-            QSplitter::handle { background: #e0e0e0; width: 3px; }
+            QPlainTextEdit {
+                background: #ffffff; color: #1a1a2e;
+                border: 1px solid #e0e0e0; font-family: 'Consolas', 'Microsoft YaHei', monospace;
+                font-size: 14px; line-height: 1.6;
+            }
         """,
         'dark': """
             QMainWindow, QWidget { background: #16161e; color: #e0e0e0; }
-            QTreeView {
-                background: #1a1a2e; color: #e0e0e0;
-                border: 1px solid #333; border-radius: 4px;
-                font-size: 13px;
-            }
-            QTreeView::item { padding: 4px 8px; }
-            QTreeView::item:selected { background: #e94560; color: white; }
-            QTreeView::item:hover { background: #252540; }
             QToolBar {
                 background: #1a1a2e; border-bottom: 1px solid #333;
                 padding: 4px; spacing: 6px;
@@ -416,7 +462,11 @@ class MarkdownReader(QMainWindow):
             QMenuBar::item:selected { background: #252540; }
             QMenu { background: #1a1a2e; border: 1px solid #444; color: #e0e0e0; }
             QMenu::item:selected { background: #252540; }
-            QSplitter::handle { background: #333; width: 3px; }
+            QPlainTextEdit {
+                background: #1a1a2e; color: #e0e0e0;
+                border: 1px solid #333; font-family: 'Consolas', 'Microsoft YaHei', monospace;
+                font-size: 14px; line-height: 1.6;
+            }
         """
     }
 
@@ -429,6 +479,8 @@ class MarkdownReader(QMainWindow):
         self.settings = QSettings('MDReader', 'MarkdownReader')
         self.recent_files = []
         self.current_theme = 'light'
+        self.is_edit_mode = False
+        self.file_browser = None
 
         # 初始化
         self._init_window()
@@ -474,6 +526,18 @@ class MarkdownReader(QMainWindow):
 
         file_menu.addSeparator()
 
+        save_action = QAction('保存(&S)', self)
+        save_action.setShortcut(QKeySequence.Save)
+        save_action.triggered.connect(self.save_file)
+        file_menu.addAction(save_action)
+
+        save_as_action = QAction('另存为(&A)...', self)
+        save_as_action.setShortcut(QKeySequence('Ctrl+Shift+S'))
+        save_as_action.triggered.connect(self.save_file_as)
+        file_menu.addAction(save_as_action)
+
+        file_menu.addSeparator()
+
         reload_action = QAction('重新加载(&R)', self)
         reload_action.setShortcut(QKeySequence.Refresh)
         reload_action.triggered.connect(self.reload_file)
@@ -499,6 +563,51 @@ class MarkdownReader(QMainWindow):
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
 
+        # 编辑菜单
+        edit_menu = menubar.addMenu('编辑(&E)')
+
+        self.toggle_edit_action = QAction('编辑模式(&E)', self)
+        self.toggle_edit_action.setShortcut(QKeySequence('Ctrl+E'))
+        self.toggle_edit_action.setCheckable(True)
+        self.toggle_edit_action.triggered.connect(self.toggle_edit_mode)
+        edit_menu.addAction(self.toggle_edit_action)
+
+        edit_menu.addSeparator()
+
+        undo_action = QAction('撤销(&U)', self)
+        undo_action.setShortcut(QKeySequence.Undo)
+        undo_action.triggered.connect(self._undo)
+        edit_menu.addAction(undo_action)
+
+        redo_action = QAction('重做(&R)', self)
+        redo_action.setShortcut(QKeySequence.Redo)
+        redo_action.triggered.connect(self._redo)
+        edit_menu.addAction(redo_action)
+
+        edit_menu.addSeparator()
+
+        cut_action = QAction('剪切(&T)', self)
+        cut_action.setShortcut(QKeySequence.Cut)
+        cut_action.triggered.connect(self._cut)
+        edit_menu.addAction(cut_action)
+
+        copy_action = QAction('复制(&C)', self)
+        copy_action.setShortcut(QKeySequence.Copy)
+        copy_action.triggered.connect(self._copy)
+        edit_menu.addAction(copy_action)
+
+        paste_action = QAction('粘贴(&P)', self)
+        paste_action.setShortcut(QKeySequence.Paste)
+        paste_action.triggered.connect(self._paste)
+        edit_menu.addAction(paste_action)
+
+        edit_menu.addSeparator()
+
+        select_all_action = QAction('全选(&A)', self)
+        select_all_action.setShortcut(QKeySequence.SelectAll)
+        select_all_action.triggered.connect(self._select_all)
+        edit_menu.addAction(select_all_action)
+
         # 视图菜单
         view_menu = menubar.addMenu('视图(&V)')
 
@@ -509,10 +618,12 @@ class MarkdownReader(QMainWindow):
 
         view_menu.addSeparator()
 
-        toggle_tree_action = QAction('显示/隐藏目录树(&S)', self)
-        toggle_tree_action.setShortcut(QKeySequence('Ctrl+B'))
-        toggle_tree_action.triggered.connect(self.toggle_tree)
-        view_menu.addAction(toggle_tree_action)
+        toggle_browser_action = QAction('文件浏览器(&B)', self)
+        toggle_browser_action.setShortcut(QKeySequence('Ctrl+B'))
+        toggle_browser_action.triggered.connect(self.toggle_file_browser)
+        view_menu.addAction(toggle_browser_action)
+
+        view_menu.addSeparator()
 
         zoom_in_action = QAction('放大(&I)', self)
         zoom_in_action.setShortcut(QKeySequence.ZoomIn)
@@ -552,6 +663,11 @@ class MarkdownReader(QMainWindow):
         open_btn.triggered.connect(self.open_file_dialog)
         toolbar.addAction(open_btn)
 
+        # 保存按钮
+        save_btn = QAction('💾 保存', self)
+        save_btn.triggered.connect(self.save_file)
+        toolbar.addAction(save_btn)
+
         # 刷新按钮
         reload_btn = QAction('🔄 刷新', self)
         reload_btn.triggered.connect(self.reload_file)
@@ -561,6 +677,14 @@ class MarkdownReader(QMainWindow):
         close_btn = QAction('✖ 关闭', self)
         close_btn.triggered.connect(self.close_document)
         toolbar.addAction(close_btn)
+
+        toolbar.addSeparator()
+
+        # 编辑模式切换
+        self.edit_btn = QAction('✏️ 编辑', self)
+        self.edit_btn.setCheckable(True)
+        self.edit_btn.triggered.connect(self.toggle_edit_mode)
+        toolbar.addAction(self.edit_btn)
 
         toolbar.addSeparator()
 
@@ -585,6 +709,11 @@ class MarkdownReader(QMainWindow):
         theme_btn.triggered.connect(self.toggle_theme)
         toolbar.addAction(theme_btn)
 
+        # 文件浏览器按钮
+        browser_btn = QAction('📁 浏览器', self)
+        browser_btn.triggered.connect(self.toggle_file_browser)
+        toolbar.addAction(browser_btn)
+
         # 弹簧
         spacer = QWidget()
         spacer.setSizePolicy(
@@ -600,35 +729,14 @@ class MarkdownReader(QMainWindow):
 
     def _init_ui(self):
         """初始化主界面"""
-        # 主分割器（左右布局）
-        self.splitter = QSplitter(Qt.Horizontal)
-        self.splitter.setHandleWidth(3)
+        # 主容器
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        layout = QVBoxLayout(self.central_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        # 左侧：文件树
-        self.tree_frame = QFrame()
-        tree_layout = QVBoxLayout(self.tree_frame)
-        tree_layout.setContentsMargins(0, 0, 0, 0)
-
-        # 文件系统模型
-        self.fs_model = QFileSystemModel()
-        self.fs_model.setReadOnly(True)
-        self.fs_model.setNameFilterDisables(False)
-        self.fs_model.setNameFilters(['*.md', '*.markdown', '*.txt'])
-
-        # 文件树视图
-        self.tree_view = QTreeView()
-        self.tree_view.setModel(self.fs_model)
-        self.tree_view.setColumnHidden(1, True)  # 隐藏大小列
-        self.tree_view.setColumnHidden(2, True)  # 隐藏类型列
-        self.tree_view.setColumnHidden(3, True)  # 隐藏修改日期列
-        self.tree_view.setHeaderHidden(True)
-        self.tree_view.clicked.connect(self._on_tree_clicked)
-        self.tree_view.setAnimated(True)
-
-        tree_layout.addWidget(self.tree_view)
-        self.splitter.addWidget(self.tree_frame)
-
-        # 右侧：WebView
+        # WebView（阅读模式）
         self.web_view = QWebEngineView()
         self.web_page = MarkdownWebPage(self)
         self.web_view.setPage(self.web_page)
@@ -639,20 +747,26 @@ class MarkdownReader(QMainWindow):
         settings.setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, False)
         settings.setFontSize(QWebEngineSettings.DefaultFontSize, 16)
 
-        self.splitter.addWidget(self.web_view)
+        # 文本编辑器（编辑模式）
+        self.text_editor = QPlainTextEdit()
+        self.text_editor.setTabStopDistance(40)  # Tab 宽度
+        self.text_editor.textChanged.connect(self._on_text_changed)
+        self.text_editor.hide()
 
-        # 分割器比例
-        self.splitter.setSizes([250, 950])
-        self.splitter.setStretchFactor(0, 0)
-        self.splitter.setStretchFactor(1, 1)
-
-        self.setCentralWidget(self.splitter)
+        # 添加到布局
+        layout.addWidget(self.web_view)
+        layout.addWidget(self.text_editor)
 
         # 状态栏
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
         self.status_label = QLabel('就绪')
         self.status_bar.addWidget(self.status_label)
+
+        # 编辑状态标签
+        self.edit_status_label = QLabel('')
+        self.edit_status_label.setStyleSheet('color: #e94560; font-weight: bold;')
+        self.status_bar.addPermanentWidget(self.edit_status_label)
 
         # 显示欢迎页面
         self._show_welcome()
@@ -680,11 +794,6 @@ class MarkdownReader(QMainWindow):
         if state:
             self.restoreState(state)
 
-        # 分割器状态
-        splitter = self.settings.value('splitter')
-        if splitter:
-            self.splitter.restoreState(splitter)
-
         # 主题
         self.current_theme = self.settings.value('theme', 'light')
         self._apply_theme()
@@ -695,7 +804,7 @@ class MarkdownReader(QMainWindow):
         # 上次打开的文件夹
         last_folder = self.settings.value('last_folder', '')
         if last_folder and os.path.isdir(last_folder):
-            self._set_tree_root(last_folder)
+            self._init_file_browser(last_folder)
 
         # 上次打开的文件
         last_file = self.settings.value('last_file', '')
@@ -706,7 +815,6 @@ class MarkdownReader(QMainWindow):
         """保存设置"""
         self.settings.setValue('geometry', self.saveGeometry())
         self.settings.setValue('windowState', self.saveState())
-        self.settings.setValue('splitter', self.splitter.saveState())
         self.settings.setValue('theme', self.current_theme)
         self.settings.setValue('recent_files', self.recent_files)
         if self.current_file:
@@ -730,10 +838,22 @@ class MarkdownReader(QMainWindow):
         """打开文件夹对话框"""
         folder = QFileDialog.getExistingDirectory(self, '选择文件夹')
         if folder:
-            self._set_tree_root(folder)
+            self._init_file_browser(folder)
 
     def open_file(self, file_path: str):
         """打开并渲染 Markdown 文件"""
+        # 如果在编辑模式，先提示保存
+        if self.is_edit_mode and self.text_editor.document().isModified():
+            reply = QMessageBox.question(
+                self, '保存更改',
+                '当前文件已修改，是否保存？',
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+            )
+            if reply == QMessageBox.Save:
+                self.save_file()
+            elif reply == QMessageBox.Cancel:
+                return
+
         file_path = os.path.abspath(file_path)
         if not os.path.isfile(file_path):
             self.status_label.setText(f'❌ 文件不存在: {file_path}')
@@ -754,11 +874,18 @@ class MarkdownReader(QMainWindow):
                 self.status_label.setText('❌ 无法解码文件')
                 return
 
+            # 保存原始内容用于编辑
+            self._raw_content = content
+
             # 渲染 HTML
             html = self.renderer.render(content, file_path)
 
             # 设置到 WebView
             self.web_view.setHtml(html, QUrl.fromLocalFile(file_path))
+
+            # 更新编辑器内容
+            self.text_editor.setPlainText(content)
+            self.text_editor.document().setModified(False)
 
             # 更新状态
             self.current_file = file_path
@@ -776,11 +903,65 @@ class MarkdownReader(QMainWindow):
                 f'✅ {file_name} | {lines} 行 | {file_size/1024:.1f} KB'
             )
 
-            # 更新文件树选中状态
-            self._select_in_tree(file_path)
+            # 更新文件浏览器选中状态
+            if self.file_browser:
+                self.file_browser.select_file(file_path)
 
         except Exception as e:
             self.status_label.setText(f'❌ 打开失败: {str(e)}')
+
+    def save_file(self):
+        """保存文件"""
+        if not self.current_file:
+            return
+
+        if not self.is_edit_mode:
+            self.status_label.setText('ℹ️ 请先切换到编辑模式')
+            return
+
+        try:
+            content = self.text_editor.toPlainText()
+            with open(self.current_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            self.text_editor.document().setModified(False)
+            self._raw_content = content
+
+            # 重新渲染
+            html = self.renderer.render(content, self.current_file)
+            self.web_view.setHtml(html, QUrl.fromLocalFile(self.current_file))
+
+            self.status_label.setText(f'✅ 已保存: {Path(self.current_file).name}')
+        except Exception as e:
+            self.status_label.setText(f'❌ 保存失败: {str(e)}')
+
+    def save_file_as(self):
+        """另存为"""
+        if not self.current_file and not self.is_edit_mode:
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, '另存为', '',
+            'Markdown 文件 (*.md);;文本文件 (*.txt);;所有文件 (*)'
+        )
+        if not file_path:
+            return
+
+        try:
+            content = self.text_editor.toPlainText() if self.is_edit_mode else self._raw_content
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            self.current_file = file_path
+            self.text_editor.document().setModified(False)
+            self._raw_content = content
+
+            file_name = Path(file_path).name
+            self.setWindowTitle(f'{file_name} - Markdown 阅读器')
+            self.file_label.setText(f'📄 {file_name}')
+            self.status_label.setText(f'✅ 已保存: {file_name}')
+        except Exception as e:
+            self.status_label.setText(f'❌ 保存失败: {str(e)}')
 
     def reload_file(self):
         """重新加载当前文件"""
@@ -789,11 +970,29 @@ class MarkdownReader(QMainWindow):
 
     def close_document(self):
         """关闭当前文档，回到欢迎页面"""
+        if self.is_edit_mode and self.text_editor.document().isModified():
+            reply = QMessageBox.question(
+                self, '保存更改',
+                '当前文件已修改，是否保存？',
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+            )
+            if reply == QMessageBox.Save:
+                self.save_file()
+            elif reply == QMessageBox.Cancel:
+                return
+
         if self.current_file:
             self.current_file = None
+            self._raw_content = ''
             self.setWindowTitle('Markdown 阅读器')
             self.file_label.setText('未打开文件')
             self.status_label.setText('就绪')
+            self.edit_status_label.setText('')
+
+            # 退出编辑模式
+            if self.is_edit_mode:
+                self.toggle_edit_mode(False)
+
             self._show_welcome()
 
     def export_html(self):
@@ -809,8 +1008,7 @@ class MarkdownReader(QMainWindow):
             return
 
         try:
-            with open(self.current_file, 'r', encoding='utf-8') as f:
-                content = f.read()
+            content = self.text_editor.toPlainText() if self.is_edit_mode else self._raw_content
             html = self.renderer.render(content, self.current_file)
 
             with open(save_path, 'w', encoding='utf-8') as f:
@@ -821,27 +1019,120 @@ class MarkdownReader(QMainWindow):
             self.status_label.setText(f'❌ 导出失败: {str(e)}')
 
     # ----------------------------------------------------------
-    # 文件树
+    # 编辑模式
     # ----------------------------------------------------------
 
-    def _set_tree_root(self, folder: str):
-        """设置文件树根目录"""
-        index = self.fs_model.setRootPath(folder)
-        self.tree_view.setRootIndex(index)
-        self.tree_view.scrollToTop()
+    def toggle_edit_mode(self, checked=None):
+        """切换编辑/阅读模式"""
+        if not self.current_file:
+            self.status_label.setText('ℹ️ 请先打开文件')
+            return
 
-    def _on_tree_clicked(self, index):
-        """文件树点击事件"""
-        file_path = self.fs_model.filePath(index)
-        if os.path.isfile(file_path) and file_path.endswith(('.md', '.markdown', '.txt')):
-            self.open_file(file_path)
+        if checked is None:
+            checked = not self.is_edit_mode
 
-    def _select_in_tree(self, file_path: str):
-        """在文件树中选中指定文件"""
-        index = self.fs_model.index(file_path)
-        if index.isValid():
-            self.tree_view.setCurrentIndex(index)
-            self.tree_view.scrollTo(index)
+        self.is_edit_mode = checked
+        self.edit_btn.setChecked(checked)
+        self.toggle_edit_action.setChecked(checked)
+
+        if checked:
+            # 切换到编辑模式
+            self.web_view.hide()
+            self.text_editor.show()
+            self.text_editor.setPlainText(self._raw_content)
+            self.text_editor.document().setModified(False)
+            self.edit_status_label.setText('✏️ 编辑模式')
+            self.status_label.setText('📝 已切换到编辑模式')
+        else:
+            # 切换到阅读模式
+            if self.text_editor.document().isModified():
+                reply = QMessageBox.question(
+                    self, '保存更改',
+                    '文件已修改，是否保存并刷新预览？',
+                    QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+                )
+                if reply == QMessageBox.Save:
+                    self.save_file()
+                elif reply == QMessageBox.Cancel:
+                    self.is_edit_mode = True
+                    self.edit_btn.setChecked(True)
+                    self.toggle_edit_action.setChecked(True)
+                    return
+
+            self.text_editor.hide()
+            self.web_view.show()
+            self.edit_status_label.setText('')
+
+            # 重新渲染
+            content = self.text_editor.toPlainText()
+            html = self.renderer.render(content, self.current_file)
+            self.web_view.setHtml(html, QUrl.fromLocalFile(self.current_file))
+            self.status_label.setText('👁️ 已切换到阅读模式')
+
+    def _on_text_changed(self):
+        """文本变化时更新状态"""
+        if self.is_edit_mode:
+            if self.text_editor.document().isModified():
+                self.edit_status_label.setText('✏️ 编辑模式 *')
+            else:
+                self.edit_status_label.setText('✏️ 编辑模式')
+
+    def _undo(self):
+        """撤销"""
+        if self.is_edit_mode:
+            self.text_editor.undo()
+
+    def _redo(self):
+        """重做"""
+        if self.is_edit_mode:
+            self.text_editor.redo()
+
+    def _cut(self):
+        """剪切"""
+        if self.is_edit_mode:
+            self.text_editor.cut()
+
+    def _copy(self):
+        """复制"""
+        if self.is_edit_mode:
+            self.text_editor.copy()
+
+    def _paste(self):
+        """粘贴"""
+        if self.is_edit_mode:
+            self.text_editor.paste()
+
+    def _select_all(self):
+        """全选"""
+        if self.is_edit_mode:
+            self.text_editor.selectAll()
+
+    # ----------------------------------------------------------
+    # 文件浏览器
+    # ----------------------------------------------------------
+
+    def _init_file_browser(self, folder: str):
+        """初始化文件浏览器"""
+        if not self.file_browser:
+            self.file_browser = FileBrowserPanel(self)
+            self.file_browser.file_selected.connect(self.open_file)
+
+        self.file_browser.set_root_path(folder)
+        self.file_browser.show()
+        self.file_browser.raise_()
+
+    def toggle_file_browser(self):
+        """显示/隐藏文件浏览器"""
+        if not self.file_browser:
+            # 如果没有浏览器，打开文件夹对话框
+            self.open_folder_dialog()
+            return
+
+        if self.file_browser.isVisible():
+            self.file_browser.hide()
+        else:
+            self.file_browser.show()
+            self.file_browser.raise_()
 
     # ----------------------------------------------------------
     # 搜索
@@ -851,13 +1142,27 @@ class MarkdownReader(QMainWindow):
         """在页面中搜索文本"""
         text = self.search_input.text().strip()
         if text:
-            self.web_view.findText(text)
-            self.status_label.setText(f'🔍 搜索: {text}')
+            if self.is_edit_mode:
+                # 在编辑器中搜索
+                cursor = self.text_editor.textCursor()
+                cursor.movePosition(QTextCursor.Start)
+                self.text_editor.setTextCursor(cursor)
+
+                found = self.text_editor.find(text)
+                if found:
+                    self.status_label.setText(f'🔍 搜索: {text}')
+                else:
+                    self.status_label.setText(f'❌ 未找到: {text}')
+            else:
+                # 在 WebView 中搜索
+                self.web_view.findText(text)
+                self.status_label.setText(f'🔍 搜索: {text}')
 
     def _clear_search(self):
         """清除搜索"""
         self.search_input.clear()
-        self.web_view.findText('')
+        if not self.is_edit_mode:
+            self.web_view.findText('')
         if self.current_file:
             self.status_label.setText(f'📄 {Path(self.current_file).name}')
 
@@ -870,7 +1175,7 @@ class MarkdownReader(QMainWindow):
         self.current_theme = 'dark' if self.current_theme == 'light' else 'light'
         self._apply_theme()
         # 重新渲染当前文件以应用 WebView 内部主题
-        if self.current_file:
+        if self.current_file and not self.is_edit_mode:
             self.reload_file()
 
     def _apply_theme(self):
@@ -881,14 +1186,6 @@ class MarkdownReader(QMainWindow):
         # 更新 WebView 背景
         bg_color = '#1a1a2e' if self.current_theme == 'dark' else '#ffffff'
         self.web_view.setStyleSheet(f'background: {bg_color};')
-
-    # ----------------------------------------------------------
-    # 显示/隐藏
-    # ----------------------------------------------------------
-
-    def toggle_tree(self):
-        """显示/隐藏文件树"""
-        self.tree_frame.setVisible(not self.tree_frame.isVisible())
 
     # ----------------------------------------------------------
     # 最近文件
@@ -968,14 +1265,16 @@ class MarkdownReader(QMainWindow):
 <div class="container">
     <div class="emoji">📝</div>
     <h1>Markdown 阅读器</h1>
-    <p>支持代码高亮、表格、目录树、暗色主题</p>
+    <p>支持代码高亮、表格、编辑模式、暗色主题</p>
     <div class="shortcuts">
         <h3>⌨️ 快捷键</h3>
         <div class="row"><span>打开文件</span><span class="key">Ctrl+O</span></div>
         <div class="row"><span>打开文件夹</span><span class="key">Ctrl+Shift+O</span></div>
+        <div class="row"><span>编辑模式</span><span class="key">Ctrl+E</span></div>
+        <div class="row"><span>保存</span><span class="key">Ctrl+S</span></div>
         <div class="row"><span>搜索</span><span class="key">Ctrl+F</span></div>
         <div class="row"><span>切换主题</span><span class="key">Ctrl+T</span></div>
-        <div class="row"><span>目录树</span><span class="key">Ctrl+B</span></div>
+        <div class="row"><span>文件浏览器</span><span class="key">Ctrl+B</span></div>
         <div class="row"><span>重新加载</span><span class="key">F5</span></div>
         <div class="row"><span>放大/缩小</span><span class="key">Ctrl +/-</span></div>
     </div>
@@ -992,13 +1291,14 @@ class MarkdownReader(QMainWindow):
         QMessageBox.about(
             self, '关于 Markdown 阅读器',
             '<h2>📝 Markdown 阅读器</h2>'
-            '<p>版本 1.0</p>'
+            '<p>版本 2.0</p>'
             '<p>基于 PyQt5 + QWebEngineView 构建</p>'
             '<hr>'
             '<p><b>功能特性：</b></p>'
             '<ul>'
             '<li>Markdown 完整渲染（表格、代码高亮、折叠块）</li>'
-            '<li>文件目录树浏览</li>'
+            '<li>文件浏览器浮动面板</li>'
+            '<li>编辑模式（支持保存）</li>'
             '<li>亮色/暗色主题切换</li>'
             '<li>页面内搜索</li>'
             '<li>导出 HTML</li>'
@@ -1012,7 +1312,25 @@ class MarkdownReader(QMainWindow):
 
     def closeEvent(self, event):
         """关闭窗口时保存设置"""
+        # 检查是否有未保存的更改
+        if self.is_edit_mode and self.text_editor.document().isModified():
+            reply = QMessageBox.question(
+                self, '保存更改',
+                '当前文件已修改，是否保存？',
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+            )
+            if reply == QMessageBox.Save:
+                self.save_file()
+            elif reply == QMessageBox.Cancel:
+                event.ignore()
+                return
+
         self._save_settings()
+
+        # 关闭文件浏览器
+        if self.file_browser:
+            self.file_browser.close()
+
         super().closeEvent(event)
 
     def dragEnterEvent(self, event):
