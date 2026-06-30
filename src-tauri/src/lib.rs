@@ -323,6 +323,7 @@ fn unwatch_file(app: AppHandle, path: String) -> Result<(), String> {
 /// Initializes and runs the Tauri application.
 ///
 /// Sets up all plugins (dialog, fs) and registers all commands.
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
