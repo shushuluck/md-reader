@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegui/magnus/refs/heads/main/crates/tauri-utils/schema.json",
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
   "identifier": "default",
   "description": "Default capability for MD Reader - grants file system access and dialog permissions",
   "windows": ["main"],
@@ -19,7 +19,6 @@
     "fs:allow-mkdir",
     "fs:allow-remove",
     "fs:allow-rename",
-    "fs:allow-metadata",
     {
       "identifier": "fs:scope",
       "allow": [
