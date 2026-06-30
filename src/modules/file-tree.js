@@ -5,6 +5,7 @@ const sidebar = () => document.getElementById('sidebar');
 const tree = () => document.getElementById('file-tree');
 
 let rootPath = '';
+let _clickTimer = null;
 
 export function initFileTree(folderPath) {
   rootPath = folderPath;
@@ -56,13 +57,16 @@ async function loadTree(dirPath, container) {
         container.appendChild(item);
         container.appendChild(children);
       } else {
-        item.addEventListener('click', async () => {
-          if (isMarkdown(entry.name)) {
+        item.addEventListener('click', () => {
+          if (!isMarkdown(entry.name)) return;
+          // Debounce: rapid clicks only trigger last one
+          if (_clickTimer) clearTimeout(_clickTimer);
+          _clickTimer = setTimeout(async () => {
             const { openFileInTab } = await import('./tabs.js');
             const { addRecentFile } = await import('./recent.js');
             await openFileInTab(entry.path);
             await addRecentFile(entry.path);
-          }
+          }, 150);
         });
         container.appendChild(item);
       }
@@ -81,7 +85,7 @@ function isMarkdown(name) {
 }
 
 function getFileIcon(name) {
-  if (/\.(md|markdown|mdx)$/i.test(name)) return '📝';
+  if (/\.md(markdown|mdx)?$/i.test(name)) return '📝';
   if (/\.txt$/i.test(name)) return '📄';
   if (/\.(jpg|jpeg|png|gif|svg|webp)$/i.test(name)) return '🖼️';
   if (/\.(js|ts|py|rs|go|java|c|cpp|h)$/i.test(name)) return '📜';

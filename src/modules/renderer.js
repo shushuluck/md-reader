@@ -1,6 +1,7 @@
 // Markdown Renderer with Mermaid + Code Copy + Image Preview
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
+import 'highlight.js/styles/atom-one-dark.css';
 import mermaid from 'mermaid';
 
 const previewContent = () => document.getElementById('preview-content');
@@ -35,15 +36,13 @@ md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   // Add copy button to code blocks
   const code = defaultFence(tokens, idx, options, env, self);
   const encoded = btoa(unescape(encodeURIComponent(token.content)));
-  return `<div style="position:relative">${code}<button class="code-copy-btn" onclick="window.__copyCode('${encoded}')">复制</button></div>`;
+  return `<div style="position:relative">${code}<button class="code-copy-btn" onclick="window.__copyCode('${encoded}', this)">复制</button></div>`;
 };
 
 // Global copy function
-window.__copyCode = function(encoded) {
+window.__copyCode = function(encoded, btn) {
   const text = decodeURIComponent(escape(atob(encoded)));
   navigator.clipboard.writeText(text).then(() => {
-    // Brief visual feedback
-    const btn = event.target;
     btn.textContent = '已复制 ✓';
     setTimeout(() => btn.textContent = '复制', 1500);
   });
@@ -107,15 +106,18 @@ export function toggleEditMode() {
   editing = !editing;
   
   if (editing) {
-    // Switch to editor
-    const content = document.getElementById('preview-content')?.textContent || '';
-    // Get raw content from current tab
-    import('./tabs.js').then(({ getCurrentTab }) => {
-      const tab = getCurrentTab();
-      if (tab) {
-        setEditorContent(tab.content);
-      }
-    });
+    // Switch to editor - sync content first, then show
+    const tabs = window.__tabs_module;
+    if (tabs) {
+      const tab = tabs.getCurrentTab();
+      if (tab) setEditorContent(tab.content);
+    } else {
+      import('./tabs.js').then(({ getCurrentTab }) => {
+        window.__tabs_module = { getCurrentTab };
+        const tab = getCurrentTab();
+        if (tab) setEditorContent(tab.content);
+      });
+    }
     previewEl()?.classList.add('hidden');
     editorEl()?.classList.remove('hidden');
     editorTextarea()?.focus();

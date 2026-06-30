@@ -137,7 +137,7 @@ function initKeyboard() {
     if (e.key === 'F5') {
       e.preventDefault();
       const tab = getCurrentTab();
-      if (tab) {
+      if (tab && tab.path) {
         openFileInTab(tab.path);
       }
     }
