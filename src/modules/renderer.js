@@ -18,7 +18,7 @@ const ALLOWED_TAGS = new Set([
   'h1','h2','h3','h4','h5','h6','a','img','em','strong','b','i','u','s','del','ins',
   'mark','sub','sup','small','abbr','kbd','code','pre','ul','ol','li',
   'table','thead','tbody','tfoot','tr','th','td',
-  'details','summary','blockquote','input','label','figure','figcaption'
+  'details','summary','blockquote','input','label','figure','figcaption','button'
 ]);
 const ALLOWED_ATTRS = {
   'a': ['href','title','target','class'],
@@ -30,6 +30,7 @@ const ALLOWED_ATTRS = {
   'ol':['start','type'], 'li':['id'], 'code':['class'], 'pre':['class'],
   'section':['class'], 'article':['class'], 'aside':['class'], 'abbr':['title'],
   'blockquote':['cite'], 'label':['class'], 'a':['href','title','target','class'],
+  'button':['class','data-content'],
 };
 const DANGEROUS_TAGS = new Set(['script','style','iframe','object','embed','form','link','meta','svg']);
 
