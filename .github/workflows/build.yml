@@ -35,18 +35,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
-      - name: Generate icons from source
-        run: npx @tauri-apps/cli icon src-tauri/icons/icon.png
-
-      - name: Debug icon files
-        run: |
-          echo "=== Icon files after generation ==="
-          dir src-tauri\icons
-          echo "=== ICO file size ==="
-          powershell -Command "(Get-Item src-tauri\icons\icon.ico).Length"
-          echo "=== PNG file sizes ==="
-          powershell -Command "Get-ChildItem src-tauri\icons\*.png | Select-Object Name, Length"
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.6.2
         env:
