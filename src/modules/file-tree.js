@@ -81,12 +81,16 @@ async function loadTree(dirPath, container) {
 }
 
 function isMarkdown(name) {
-  return /\.(md|markdown|mdx|txt)$/i.test(name);
+  return /\.(md|markdown|mdx|txt|rst|org|html|htm|json|yaml|yml|xml|csv|tsv|log|tex)$/i.test(name);
 }
 
 function getFileIcon(name) {
-  if (/\.md(markdown|mdx)?$/i.test(name)) return '📝';
-  if (/\.txt$/i.test(name)) return '📄';
+  if (/\.(md|markdown|mdx|rst|org)$/i.test(name)) return '📝';
+  if (/\.(txt|log)$/i.test(name)) return '📄';
+  if (/\.(html|htm|xml)$/i.test(name)) return '🌐';
+  if (/\.(json|yaml|yml)$/i.test(name)) return '⚙️';
+  if (/\.(csv|tsv)$/i.test(name)) return '📊';
+  if (/\.(tex)$/i.test(name)) return '📐';
   if (/\.(jpg|jpeg|png|gif|svg|webp)$/i.test(name)) return '🖼️';
   if (/\.(js|ts|py|rs|go|java|c|cpp|h)$/i.test(name)) return '📜';
   return '📄';

@@ -89,14 +89,45 @@ export function isEditing() {
   return editing;
 }
 
+// One-time event delegation (bound once, not per render)
+function initContentDelegation() {
+  const container = previewContent();
+  if (!container || container._delegationInit) return;
+  container._delegationInit = true;
+
+  // Code copy
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.code-copy-btn');
+    if (!btn) return;
+    let text = '';
+    try { text = decodeURIComponent(btn.dataset.content || ''); } catch { text = btn.dataset.content || ''; }
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '已复制 ✓';
+      setTimeout(() => btn.textContent = '复制', 1500);
+    });
+  });
+
+  // Image click preview
+  container.addEventListener('click', (e) => {
+    const img = e.target.closest('img');
+    if (img) window.open(img.src, '_blank');
+  });
+}
+
 export function renderMarkdown(content) {
   const container = previewContent();
   if (!container) return;
   
+  // Ensure one-time delegation
+  initContentDelegation();
+
   // Render markdown with XSS filtering
   const rawHtml = md.render(content || '');
   container.innerHTML = xss(rawHtml, xssOptions);
   
+  // Make images clickable
+  container.querySelectorAll('img').forEach(img => { img.style.cursor = 'pointer'; });
+
   // Render mermaid diagrams with unique IDs
   const mermaidEls = container.querySelectorAll('.mermaid');
   if (mermaidEls.length > 0) {
@@ -111,25 +142,6 @@ export function renderMarkdown(content) {
       }
     });
   }
-
-  // Event delegation for code copy buttons (no XSS, no global function)
-  container.addEventListener('click', (e) => {
-    const btn = e.target.closest('.code-copy-btn');
-    if (!btn) return;
-    const text = decodeURIComponent(btn.dataset.content);
-    navigator.clipboard.writeText(text).then(() => {
-      btn.textContent = '已复制 ✓';
-      setTimeout(() => btn.textContent = '复制', 1500);
-    });
-  });
-
-  // Make images clickable for preview
-  container.querySelectorAll('img').forEach(img => {
-    img.addEventListener('click', () => {
-      window.open(img.src, '_blank');
-    });
-    img.style.cursor = 'pointer';
-  });
 
   // Show preview, hide editor
   previewEl()?.classList.remove('hidden');

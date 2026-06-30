@@ -2,6 +2,7 @@
 import { invoke } from '../main.js';
 import { renderMarkdown, setEditorContent, getEditorContent, isEditing } from './renderer.js';
 import { showView, updateStatus, updateFileInfo, updateContentStats, showFileChangeToast } from '../main.js';
+import { refreshOutline } from './outline.js';
 
 const tabs = []; // { id, name, path, content, modified, size, encoding, cachedHtml }
 
@@ -151,6 +152,12 @@ function switchToTab(id) {
   // Update window title
   document.title = `${tab.name} - MD Reader`;
   document.getElementById('file-name').textContent = tab.name;
+
+  // Auto-refresh outline if visible
+  const outlinePanel = document.getElementById('outline-panel');
+  if (outlinePanel && !outlinePanel.classList.contains('hidden')) {
+    refreshOutline();
+  }
 }
 
 function renderTabContent(tab) {

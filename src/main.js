@@ -127,10 +127,10 @@ function initKeyboard() {
           e.preventDefault();
           closeCurrentTab();
           break;
-      }
-      if (e.shiftKey && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        toggleOutline();
+        case 'j':
+          e.preventDefault();
+          toggleOutline();
+          break;
       }
     }
     if (e.key === 'F5') {
@@ -149,7 +149,7 @@ async function openFileDialog() {
     const { open } = await import('@tauri-apps/plugin-dialog');
     const path = await open({
       multiple: false,
-      filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt', 'mdx'] }],
+      filters: [{ name: '文档', extensions: ['md', 'markdown', 'mdx', 'txt', 'rst', 'org', 'html', 'htm', 'json', 'yaml', 'yml', 'xml', 'csv', 'tsv', 'log', 'tex'] }],
     });
     if (path) {
       await openFileInTab(path);
@@ -189,6 +189,10 @@ function initWindowControls() {
     } catch (e) { console.error('maximize failed:', e); }
   });
   $('#btn-close')?.addEventListener('click', async () => {
+    // 先检查未保存
+    if (hasUnsavedChanges()) {
+      if (!confirm('有未保存的修改，确定要退出吗？')) return;
+    }
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
       await getCurrentWindow().close();
@@ -210,7 +214,6 @@ async function init() {
 
   // Toolbar buttons
   $('#btn-open').addEventListener('click', openFileDialog);
-  $('#btn-open-folder').addEventListener('click', openFolderDialog);
   $('#btn-save').addEventListener('click', saveCurrentFile);
   $('#btn-edit').addEventListener('click', () => toggleEditMode());
   $('#btn-outline').addEventListener('click', toggleOutline);
@@ -233,28 +236,13 @@ async function init() {
       }
     });
 
-    // Window close confirmation
-    try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      const win = getCurrentWindow();
-      win.onCloseRequested(async (e) => {
-        if (hasUnsavedChanges()) {
-          const confirmed = confirm('有未保存的修改，确定要退出吗？');
-          if (!confirmed) {
-            e.preventDefault();
-            return;
-          }
-        }
-      });
-    } catch {}
-
     // Drag & drop file open
     try {
       await listenEvent('tauri://drag-drop', async (event) => {
         const paths = event.payload?.paths || event.payload;
         if (Array.isArray(paths)) {
           for (const path of paths) {
-            if (/\.(md|markdown|mdx|txt)$/i.test(path)) {
+            if (/\.(md|markdown|mdx|txt|rst|org|html|htm|json|yaml|yml|xml|csv|tsv|log|tex)$/i.test(path)) {
               await openFileInTab(path);
               await addRecentFile(path);
             }
