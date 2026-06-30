@@ -3,13 +3,61 @@ import { invoke } from '../main.js';
 import { renderMarkdown, setEditorContent, getEditorContent, isEditing } from './renderer.js';
 import { showView, updateStatus, updateFileInfo, updateContentStats, showFileChangeToast } from '../main.js';
 
-const tabs = []; // { id, name, path, content, modified }
+const tabs = []; // { id, name, path, content, modified, size, encoding, cachedHtml }
 
-// Initialize tab system (called from main.js)
+// Initialize tab system with event delegation (bind once, no leaks)
 export function initTabs() {
-  // Tab bar drag-drop setup is handled per-tab in renderTabBar()
-  // This function exists for initialization symmetry
+  const list = tabList();
+  if (!list) return;
+
+  // Click delegation
+  list.addEventListener('click', (e) => {
+    const tabEl = e.target.closest('.tab');
+    if (!tabEl) return;
+    const id = parseInt(tabEl.dataset.id);
+    if (e.target.closest('.tab-close')) {
+      e.stopPropagation();
+      closeTab(id);
+    } else {
+      switchToTab(id);
+    }
+  });
+
+  // Drag & drop delegation
+  let dragId = null;
+  list.addEventListener('dragstart', (e) => {
+    const tabEl = e.target.closest('.tab');
+    if (tabEl) {
+      dragId = parseInt(tabEl.dataset.id);
+      e.dataTransfer.setData('text/plain', String(dragId));
+    }
+  });
+  list.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const tabEl = e.target.closest('.tab');
+    if (tabEl) tabEl.style.opacity = '0.5';
+  });
+  list.addEventListener('dragleave', (e) => {
+    const tabEl = e.target.closest('.tab');
+    if (tabEl) tabEl.style.opacity = '';
+  });
+  list.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const tabEl = e.target.closest('.tab');
+    if (!tabEl) return;
+    tabEl.style.opacity = '';
+    const dropId = parseInt(tabEl.dataset.id);
+    const dragIdx = tabs.findIndex(t => t.id === dragId);
+    const dropIdx = tabs.findIndex(t => t.id === dropId);
+    if (dragIdx !== -1 && dropIdx !== -1 && dragIdx !== dropIdx) {
+      const [moved] = tabs.splice(dragIdx, 1);
+      tabs.splice(dropIdx, 0, moved);
+      renderTabBar();
+    }
+    dragId = null;
+  });
 }
+
 let activeTabId = null;
 let tabIdCounter = 0;
 
@@ -24,6 +72,10 @@ export function getTabs() {
   return tabs;
 }
 
+export function hasUnsavedChanges() {
+  return tabs.some(t => t.modified);
+}
+
 export async function openFileInTab(path) {
   // Check if already open
   const existing = tabs.find(t => t.path === path);
@@ -34,6 +86,7 @@ export async function openFileInTab(path) {
       const content = await invoke('read_file_content', { path });
       existing.content = content;
       existing.modified = false;
+      delete existing.cachedHtml; // invalidate cache
       renderTabContent(existing);
     } catch (e) {
       updateStatus(`读取失败: ${e}`);
@@ -51,6 +104,9 @@ export async function openFileInTab(path) {
       path,
       content,
       modified: false,
+      size: new Blob([content]).size,
+      encoding: 'UTF-8',
+      cachedHtml: null,
     };
     tabs.push(tab);
     renderTabBar();
@@ -74,6 +130,9 @@ export function createEmptyTab() {
     path: null,
     content: '',
     modified: false,
+    size: 0,
+    encoding: 'UTF-8',
+    cachedHtml: null,
   };
   tabs.push(tab);
   renderTabBar();
@@ -96,14 +155,34 @@ function switchToTab(id) {
 
 function renderTabContent(tab) {
   showView('preview');
-  renderMarkdown(tab.content);
+  const container = document.getElementById('preview-content');
+  
+  // Cache: skip re-render if content unchanged
+  if (!tab.modified && tab.cachedHtml && container) {
+    container.innerHTML = tab.cachedHtml;
+    // Rebind image clicks
+    container.querySelectorAll('img').forEach(img => {
+      img.addEventListener('click', () => window.open(img.src, '_blank'));
+      img.style.cursor = 'pointer';
+    });
+  } else {
+    renderMarkdown(tab.content);
+    if (container) tab.cachedHtml = container.innerHTML;
+  }
+  
   updateContentStats(tab.content);
-  updateFileInfo({ size: new Blob([tab.content]).size, encoding: 'UTF-8' });
+  updateFileInfo({ size: tab.size || new Blob([tab.content]).size, encoding: tab.encoding || 'UTF-8' });
 }
 
 export function closeTab(id) {
   const idx = tabs.findIndex(t => t.id === id);
   if (idx === -1) return;
+
+  const tab = tabs[idx];
+  // Confirm if modified
+  if (tab.modified) {
+    if (!confirm(`文件 "${tab.name}" 已修改，确定要关闭吗？`)) return;
+  }
 
   const wasActive = id === activeTabId;
   tabs.splice(idx, 1);
@@ -153,6 +232,8 @@ export async function saveCurrentFile() {
     await invoke('write_file_content', { path: tab.path, content });
     tab.content = content;
     tab.modified = false;
+    tab.size = new Blob([content]).size;
+    delete tab.cachedHtml; // invalidate cache after save
     renderTabBar();
     updateStatus(`已保存: ${tab.name}`);
   } catch (e) {
@@ -164,11 +245,13 @@ export function markModified() {
   const tab = getCurrentTab();
   if (tab) {
     tab.modified = true;
+    delete tab.cachedHtml;
     renderTabBar();
     document.getElementById('btn-save').disabled = false;
   }
 }
 
+// Render tab bar DOM only (events handled by delegation in initTabs)
 function renderTabBar() {
   const list = tabList();
   list.innerHTML = '';
@@ -193,37 +276,7 @@ function renderTabBar() {
     const closeBtn = document.createElement('span');
     closeBtn.className = 'tab-close';
     closeBtn.textContent = '✕';
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeTab(tab.id);
-    });
     el.appendChild(closeBtn);
-
-    el.addEventListener('click', () => switchToTab(tab.id));
-
-    // Drag & drop reorder
-    el.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('text/plain', tab.id);
-    });
-    el.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      el.style.opacity = '0.5';
-    });
-    el.addEventListener('dragleave', () => {
-      el.style.opacity = '';
-    });
-    el.addEventListener('drop', (e) => {
-      e.preventDefault();
-      el.style.opacity = '';
-      const dragId = parseInt(e.dataTransfer.getData('text/plain'));
-      const dragIdx = tabs.findIndex(t => t.id === dragId);
-      const dropIdx = tabs.findIndex(t => t.id === tab.id);
-      if (dragIdx !== -1 && dropIdx !== -1 && dragIdx !== dropIdx) {
-        const [moved] = tabs.splice(dragIdx, 1);
-        tabs.splice(dropIdx, 0, moved);
-        renderTabBar();
-      }
-    });
 
     list.appendChild(el);
   });

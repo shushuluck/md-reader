@@ -1,5 +1,6 @@
 // Recent Files Module
 import { invoke } from '../main.js';
+import { openFileInTab } from './tabs.js';
 
 const section = () => document.getElementById('recent-files-section');
 const list = () => document.getElementById('recent-files-list');
@@ -43,7 +44,6 @@ function renderRecentFiles(files) {
     item.textContent = `📄 ${name}`;
     item.title = path;
     item.addEventListener('click', async () => {
-      const { openFileInTab } = await import('./tabs.js');
       await openFileInTab(path);
     });
     lst.appendChild(item);

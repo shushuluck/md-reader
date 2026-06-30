@@ -10,6 +10,7 @@ const previewEl = () => document.getElementById('preview');
 const editorEl = () => document.getElementById('editor');
 
 let editing = false;
+let mermaidIdCounter = 0;
 
 // Init markdown-it with highlight.js
 const md = new MarkdownIt({
@@ -26,34 +27,29 @@ const md = new MarkdownIt({
   }
 });
 
-// Custom fence rule for mermaid
+// Custom fence rule for mermaid + code copy (use data attribute, not onclick)
 const defaultFence = md.renderer.rules.fence.bind(md.renderer.rules);
 md.renderer.rules.fence = function (tokens, idx, options, env, self) {
   const token = tokens[idx];
   if (token.info.trim().toLowerCase() === 'mermaid') {
     return `<div class="mermaid-container"><pre class="mermaid">${md.utils.escapeHtml(token.content)}</pre></div>`;
   }
-  // Add copy button to code blocks
+  // Add copy button with data attribute (no XSS risk)
   const code = defaultFence(tokens, idx, options, env, self);
-  const encoded = btoa(unescape(encodeURIComponent(token.content)));
-  return `<div style="position:relative">${code}<button class="code-copy-btn" onclick="window.__copyCode('${encoded}', this)">复制</button></div>`;
+  const encoded = encodeURIComponent(token.content);
+  return `<div style="position:relative">${code}<button class="code-copy-btn" data-content="${encoded}">复制</button></div>`;
 };
 
-// Global copy function
-window.__copyCode = function(encoded, btn) {
-  const text = decodeURIComponent(escape(atob(encoded)));
-  navigator.clipboard.writeText(text).then(() => {
-    btn.textContent = '已复制 ✓';
-    setTimeout(() => btn.textContent = '复制', 1500);
+// Init mermaid with strict security
+function initMermaid(theme) {
+  const mermaidTheme = (theme === 'glass' || theme === 'flat') ? 'dark' : 'default';
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: mermaidTheme,
+    securityLevel: 'strict',
   });
-};
-
-// Init mermaid
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'default',
-  securityLevel: 'loose',
-});
+}
+initMermaid(document.body.dataset.theme);
 
 export function isEditing() {
   return editing;
@@ -66,18 +62,31 @@ export function renderMarkdown(content) {
   // Render markdown
   container.innerHTML = md.render(content || '');
   
-  // Render mermaid diagrams
+  // Render mermaid diagrams with unique IDs
   const mermaidEls = container.querySelectorAll('.mermaid');
   if (mermaidEls.length > 0) {
-    mermaidEls.forEach(async (el, i) => {
+    mermaidEls.forEach(async (el) => {
       try {
-        const { svg } = await mermaid.render(`mermaid-${Date.now()}-${i}`, el.textContent);
+        const id = `mermaid-${++mermaidIdCounter}`;
+        el.dataset.mermaidId = id;
+        const { svg } = await mermaid.render(id, el.textContent);
         el.innerHTML = svg;
       } catch (e) {
         el.innerHTML = `<pre style="color:red">Mermaid 渲染失败: ${e.message}</pre>`;
       }
     });
   }
+
+  // Event delegation for code copy buttons (no XSS, no global function)
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.code-copy-btn');
+    if (!btn) return;
+    const text = decodeURIComponent(btn.dataset.content);
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '已复制 ✓';
+      setTimeout(() => btn.textContent = '复制', 1500);
+    });
+  });
 
   // Make images clickable for preview
   container.querySelectorAll('img').forEach(img => {
@@ -102,22 +111,28 @@ export function setEditorContent(content) {
   if (editorTextarea()) editorTextarea().value = content || '';
 }
 
-export function toggleEditMode() {
+// Theme change should update mermaid
+export function updateMermaidTheme() {
+  initMermaid(document.body.dataset.theme);
+}
+
+// Lazy tabs import cache
+let _tabsModule = null;
+async function getTabsModule() {
+  if (!_tabsModule) {
+    _tabsModule = await import('./tabs.js');
+  }
+  return _tabsModule;
+}
+
+export async function toggleEditMode() {
   editing = !editing;
   
   if (editing) {
-    // Switch to editor - sync content first, then show
-    const tabs = window.__tabs_module;
-    if (tabs) {
-      const tab = tabs.getCurrentTab();
-      if (tab) setEditorContent(tab.content);
-    } else {
-      import('./tabs.js').then(({ getCurrentTab }) => {
-        window.__tabs_module = { getCurrentTab };
-        const tab = getCurrentTab();
-        if (tab) setEditorContent(tab.content);
-      });
-    }
+    // Switch to editor - await tabs module first to avoid race
+    const tabs = await getTabsModule();
+    const tab = tabs.getCurrentTab();
+    if (tab) setEditorContent(tab.content);
     previewEl()?.classList.add('hidden');
     editorEl()?.classList.remove('hidden');
     editorTextarea()?.focus();
@@ -125,13 +140,12 @@ export function toggleEditMode() {
     // Switch to preview
     const content = getEditorContent();
     // Update tab content
-    import('./tabs.js').then(({ getCurrentTab }) => {
-      const tab = getCurrentTab();
-      if (tab) {
-        tab.content = content;
-        tab.modified = true;
-      }
-    });
+    const tabs = await getTabsModule();
+    const tab = tabs.getCurrentTab();
+    if (tab) {
+      tab.content = content;
+      tab.modified = true;
+    }
     renderMarkdown(content);
   }
   

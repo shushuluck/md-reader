@@ -4,12 +4,16 @@ const searchCount = () => document.getElementById('search-count');
 
 let matches = [];
 let currentMatch = -1;
+let searchTimer = null;
 
 export function initSearch() {
   const input = searchInput();
   if (!input) return;
 
-  input.addEventListener('input', () => doSearch(input.value));
+  input.addEventListener('input', () => {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => doSearch(input.value), 150);
+  });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.shiftKey ? prevMatch() : nextMatch();
@@ -122,6 +126,10 @@ function clearSearch() {
 }
 
 function clearHighlights() {
+  // Remove search-current class first
+  if (currentMatch >= 0 && matches[currentMatch]) {
+    matches[currentMatch].classList.remove('search-current');
+  }
   document.querySelectorAll('.search-highlight').forEach(mark => {
     const text = document.createTextNode(mark.textContent);
     mark.parentNode.replaceChild(text, mark);

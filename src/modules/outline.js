@@ -16,6 +16,17 @@ export function toggleOutline() {
   p.classList.toggle('hidden');
   if (!p.classList.contains('hidden')) {
     refreshOutline();
+  } else {
+    // Remove scroll handler when hiding outline
+    removeScrollHandler();
+  }
+}
+
+function removeScrollHandler() {
+  const previewEl = document.getElementById('preview');
+  if (previewEl && _scrollHandler) {
+    previewEl.removeEventListener('scroll', _scrollHandler);
+    _scrollHandler = null;
   }
 }
 
@@ -24,12 +35,8 @@ export function refreshOutline() {
   const preview = document.getElementById('preview-content');
   if (!container || !preview) return;
 
-  // Remove old scroll handler
-  const previewEl = document.getElementById('preview');
-  if (previewEl && _scrollHandler) {
-    previewEl.removeEventListener('scroll', _scrollHandler);
-    _scrollHandler = null;
-  }
+  // Always remove old scroll handler first
+  removeScrollHandler();
 
   const headings = preview.querySelectorAll('h1, h2, h3, h4, h5, h6');
   container.innerHTML = '';
@@ -38,6 +45,8 @@ export function refreshOutline() {
     container.innerHTML = '<div style="padding:12px;opacity:0.5;font-size:12px">无标题</div>';
     return;
   }
+
+  const isMobile = () => window.innerWidth <= 600;
 
   headings.forEach((h, i) => {
     const level = parseInt(h.tagName[1]);
@@ -53,11 +62,16 @@ export function refreshOutline() {
       h.scrollIntoView({ behavior: 'smooth', block: 'start' });
       container.querySelectorAll('.outline-item').forEach(el => el.classList.remove('active'));
       item.classList.add('active');
+      // Auto-close on mobile
+      if (isMobile()) {
+        panel()?.classList.add('hidden');
+      }
     });
     container.appendChild(item);
   });
 
   // Scroll spy (single handler, properly managed)
+  const previewEl = document.getElementById('preview');
   if (previewEl) {
     _scrollHandler = () => {
       let activeIdx = 0;

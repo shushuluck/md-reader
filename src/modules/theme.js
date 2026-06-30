@@ -23,4 +23,9 @@ export function setTheme(name) {
   document.querySelectorAll('.theme-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.theme === name);
   });
+  // MutationObserver in main.js handles mermaid theme update
+}
+
+export function getCurrentTheme() {
+  return document.body.dataset.theme || 'glass';
 }

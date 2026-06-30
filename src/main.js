@@ -5,8 +5,8 @@ import './styles/flat.css';
 import './styles/paper.css';
 import './styles/mobile.css';
 
-import { initTabs, openFileInTab, getCurrentTab, saveCurrentFile, closeCurrentTab } from './modules/tabs.js';
-import { renderMarkdown, getEditorContent, setEditorContent, isEditing, toggleEditMode } from './modules/renderer.js';
+import { initTabs, openFileInTab, getCurrentTab, saveCurrentFile, closeCurrentTab, hasUnsavedChanges } from './modules/tabs.js';
+import { renderMarkdown, getEditorContent, setEditorContent, isEditing, toggleEditMode, updateMermaidTheme } from './modules/renderer.js';
 import { initSearch, focusSearch } from './modules/search.js';
 import { initOutline, toggleOutline, refreshOutline } from './modules/outline.js';
 import { loadRecentFiles, addRecentFile } from './modules/recent.js';
@@ -67,7 +67,6 @@ export function updateFileInfo(meta) {
 export function updateContentStats(text) {
   const lines = text.split('\n').length;
   const chars = text.replace(/\s/g, '').length;
-  const words = text.length;
   const readTime = Math.max(1, Math.ceil(chars / 500));
   $('#status-lines').textContent = `${lines} 行`;
   $('#status-words').textContent = `${chars} 字`;
@@ -213,11 +212,10 @@ async function init() {
   $('#btn-open').addEventListener('click', openFileDialog);
   $('#btn-open-folder').addEventListener('click', openFolderDialog);
   $('#btn-save').addEventListener('click', saveCurrentFile);
-  $('#btn-edit').addEventListener('click', toggleEditMode);
+  $('#btn-edit').addEventListener('click', () => toggleEditMode());
   $('#btn-outline').addEventListener('click', toggleOutline);
   $('#btn-sidebar').addEventListener('click', toggleSidebar);
   $('#btn-new-tab').addEventListener('click', () => {
-    // New empty tab
     import('./modules/tabs.js').then(m => m.createEmptyTab());
   });
 
@@ -234,6 +232,36 @@ async function init() {
         });
       }
     });
+
+    // Window close confirmation
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      const win = getCurrentWindow();
+      win.onCloseRequested(async (e) => {
+        if (hasUnsavedChanges()) {
+          const confirmed = confirm('有未保存的修改，确定要退出吗？');
+          if (!confirmed) {
+            e.preventDefault();
+            return;
+          }
+        }
+      });
+    } catch {}
+
+    // Drag & drop file open
+    try {
+      await listenEvent('tauri://drag-drop', async (event) => {
+        const paths = event.payload?.paths || event.payload;
+        if (Array.isArray(paths)) {
+          for (const path of paths) {
+            if (/\.(md|markdown|mdx|txt)$/i.test(path)) {
+              await openFileInTab(path);
+              await addRecentFile(path);
+            }
+          }
+        }
+      });
+    } catch {}
   }
 
   // Enable save button when editing
@@ -243,12 +271,11 @@ async function init() {
     updateContentStats(content);
   });
 
-  // Handle drag & drop
-  document.addEventListener('dragover', (e) => e.preventDefault());
-  document.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    // Tauri file drop handling would go here
+  // Listen for theme changes to update mermaid
+  const observer = new MutationObserver(() => {
+    updateMermaidTheme();
   });
+  observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
 
   updateStatus('就绪');
 }

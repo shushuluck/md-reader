@@ -1,5 +1,7 @@
 // File Tree Module
 import { invoke } from '../main.js';
+import { openFileInTab } from './tabs.js';
+import { addRecentFile } from './recent.js';
 
 const sidebar = () => document.getElementById('sidebar');
 const tree = () => document.getElementById('file-tree');
@@ -62,8 +64,6 @@ async function loadTree(dirPath, container) {
           // Debounce: rapid clicks only trigger last one
           if (_clickTimer) clearTimeout(_clickTimer);
           _clickTimer = setTimeout(async () => {
-            const { openFileInTab } = await import('./tabs.js');
-            const { addRecentFile } = await import('./recent.js');
             await openFileInTab(entry.path);
             await addRecentFile(entry.path);
           }, 150);
