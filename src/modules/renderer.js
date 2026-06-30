@@ -3,7 +3,6 @@ import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css';
 import mermaid from 'mermaid';
-import xss from 'xss';
 
 const previewContent = () => document.getElementById('preview-content');
 const editorTextarea = () => document.getElementById('editor-textarea');
@@ -13,38 +12,42 @@ const editorEl = () => document.getElementById('editor');
 let editing = false;
 let mermaidIdCounter = 0;
 
-// XSS whitelist: allow safe HTML tags for Markdown rendering
-const xssOptions = {
-  whiteList: {
-    // Structure
-    div: ['class', 'id', 'style'], span: ['class', 'id', 'style'], p: [], br: [], hr: [],
-    section: ['class'], article: ['class'], aside: ['class'], header: [], footer: [], nav: [],
-    // Headings
-    h1: ['id'], h2: ['id'], h3: ['id'], h4: ['id'], h5: ['id'], h6: ['id'],
-    // Inline
-    a: ['href', 'title', 'target', 'class'],
-    img: ['src', 'alt', 'title', 'width', 'height', 'class', 'style'],
-    em: [], strong: [], b: [], i: [], u: [], s: [], del: [], ins: [], mark: [],
-    sub: [], sup: [], small: [], abbr: ['title'], kbd: [], code: ['class'],
-    // Code
-    pre: ['class'], 
-    // Lists
-    ul: [], ol: ['start', 'type'], li: ['id'],
-    // Tables
-    table: ['class'], thead: [], tbody: [], tfoot: [], tr: [], th: ['colspan', 'rowspan', 'style'], td: ['colspan', 'rowspan', 'style'],
-    // Details/Summary (collapsible)
-    details: ['open', 'class'], summary: ['class'],
-    // Blockquote
-    blockquote: ['cite'],
-    // Misc
-    input: ['type', 'checked', 'disabled'],  // for task lists [x] / [ ]
-    label: ['class'],
-    figure: [], figcaption: [],
-  },
-  // Strip all event handlers (onclick, onload, etc.)
-  stripIgnoreTag: true,
-  stripIgnoreTagBody: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta'],
+// Inline XSS sanitizer (no npm dependency)
+const ALLOWED_TAGS = new Set([
+  'div','span','p','br','hr','section','article','aside','header','footer','nav',
+  'h1','h2','h3','h4','h5','h6','a','img','em','strong','b','i','u','s','del','ins',
+  'mark','sub','sup','small','abbr','kbd','code','pre','ul','ol','li',
+  'table','thead','tbody','tfoot','tr','th','td',
+  'details','summary','blockquote','input','label','figure','figcaption'
+]);
+const ALLOWED_ATTRS = {
+  'a': ['href','title','target','class'],
+  'img': ['src','alt','title','width','height','class','style'],
+  'div': ['class','id','style'], 'span': ['class','id','style'],
+  'h1':['id'],'h2':['id'],'h3':['id'],'h4':['id'],'h5':['id'],'h6':['id'],
+  'th':['colspan','rowspan','style'], 'td':['colspan','rowspan','style'],
+  'details':['open','class'], 'summary':['class'], 'input':['type','checked','disabled'],
+  'ol':['start','type'], 'li':['id'], 'code':['class'], 'pre':['class'],
+  'section':['class'], 'article':['class'], 'aside':['class'], 'abbr':['title'],
+  'blockquote':['cite'], 'label':['class'], 'a':['href','title','target','class'],
 };
+const DANGEROUS_TAGS = new Set(['script','style','iframe','object','embed','form','link','meta','svg']);
+
+function sanitizeHtml(html) {
+  return html.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/g, (match, tag, attrs) => {
+    const tagLower = tag.toLowerCase();
+    if (DANGEROUS_TAGS.has(tagLower)) return '';
+    if (!ALLOWED_TAGS.has(tagLower)) return '';
+    if (match.startsWith('</')) return `</${tagLower}>`;
+    const allowed = ALLOWED_ATTRS[tagLower] || [];
+    const clean = attrs.replace(/([a-zA-Z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/g, (m, name, v1, v2, v3) => {
+      if (name.startsWith('on')) return '';
+      const val = (v1 ?? v2 ?? v3 ?? '').replace(/"/g, '&quot;');
+      return allowed.includes(name.toLowerCase()) ? `${name}="${val}"` : '';
+    });
+    return `<${tagLower}${clean}>`;
+  });
+}
 
 // Init markdown-it with highlight.js + HTML support
 const md = new MarkdownIt({
@@ -123,7 +126,7 @@ export function renderMarkdown(content) {
 
   // Render markdown with XSS filtering
   const rawHtml = md.render(content || '');
-  container.innerHTML = xss(rawHtml, xssOptions);
+  container.innerHTML = sanitizeHtml(rawHtml);
   
   // Make images clickable
   container.querySelectorAll('img').forEach(img => { img.style.cursor = 'pointer'; });
