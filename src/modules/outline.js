@@ -3,6 +3,7 @@ const panel = () => document.getElementById('outline-panel');
 const content = () => document.getElementById('outline-content');
 
 let _scrollHandler = null;
+let _rafId = null;
 
 export function initOutline() {
   document.getElementById('btn-close-outline')?.addEventListener('click', () => {
@@ -17,12 +18,15 @@ export function toggleOutline() {
   if (!p.classList.contains('hidden')) {
     refreshOutline();
   } else {
-    // Remove scroll handler when hiding outline
     removeScrollHandler();
   }
 }
 
 function removeScrollHandler() {
+  if (_rafId) {
+    cancelAnimationFrame(_rafId);
+    _rafId = null;
+  }
   const previewEl = document.getElementById('preview');
   if (previewEl && _scrollHandler) {
     previewEl.removeEventListener('scroll', _scrollHandler);
@@ -70,19 +74,26 @@ export function refreshOutline() {
     container.appendChild(item);
   });
 
-  // Scroll spy (single handler, properly managed)
+  // Scroll spy with rAF throttle (no jank)
   const previewEl = document.getElementById('preview');
   if (previewEl) {
+    const items = container.querySelectorAll('.outline-item');
     _scrollHandler = () => {
-      let activeIdx = 0;
-      headings.forEach((h, i) => {
-        const rect = h.getBoundingClientRect();
-        if (rect.top < 100) activeIdx = i;
-      });
-      container.querySelectorAll('.outline-item').forEach((el, i) => {
-        el.classList.toggle('active', i === activeIdx);
+      if (_rafId) return; // already scheduled
+      _rafId = requestAnimationFrame(() => {
+        _rafId = null;
+        let activeIdx = 0;
+        const previewRect = previewEl.getBoundingClientRect();
+        headings.forEach((h, i) => {
+          if (h.getBoundingClientRect().top - previewRect.top < 80) {
+            activeIdx = i;
+          }
+        });
+        items.forEach((el, i) => {
+          el.classList.toggle('active', i === activeIdx);
+        });
       });
     };
-    previewEl.addEventListener('scroll', _scrollHandler);
+    previewEl.addEventListener('scroll', _scrollHandler, { passive: true });
   }
 }

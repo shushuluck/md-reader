@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css';
 import mermaid from 'mermaid';
+import xss from 'xss';
 
 const previewContent = () => document.getElementById('preview-content');
 const editorTextarea = () => document.getElementById('editor-textarea');
@@ -12,9 +13,42 @@ const editorEl = () => document.getElementById('editor');
 let editing = false;
 let mermaidIdCounter = 0;
 
-// Init markdown-it with highlight.js
+// XSS whitelist: allow safe HTML tags for Markdown rendering
+const xssOptions = {
+  whiteList: {
+    // Structure
+    div: ['class', 'id', 'style'], span: ['class', 'id', 'style'], p: [], br: [], hr: [],
+    section: ['class'], article: ['class'], aside: ['class'], header: [], footer: [], nav: [],
+    // Headings
+    h1: ['id'], h2: ['id'], h3: ['id'], h4: ['id'], h5: ['id'], h6: ['id'],
+    // Inline
+    a: ['href', 'title', 'target', 'class'],
+    img: ['src', 'alt', 'title', 'width', 'height', 'class', 'style'],
+    em: [], strong: [], b: [], i: [], u: [], s: [], del: [], ins: [], mark: [],
+    sub: [], sup: [], small: [], abbr: ['title'], kbd: [], code: ['class'],
+    // Code
+    pre: ['class'], 
+    // Lists
+    ul: [], ol: ['start', 'type'], li: ['id'],
+    // Tables
+    table: ['class'], thead: [], tbody: [], tfoot: [], tr: [], th: ['colspan', 'rowspan', 'style'], td: ['colspan', 'rowspan', 'style'],
+    // Details/Summary (collapsible)
+    details: ['open', 'class'], summary: ['class'],
+    // Blockquote
+    blockquote: ['cite'],
+    // Misc
+    input: ['type', 'checked', 'disabled'],  // for task lists [x] / [ ]
+    label: ['class'],
+    figure: [], figcaption: [],
+  },
+  // Strip all event handlers (onclick, onload, etc.)
+  stripIgnoreTag: true,
+  stripIgnoreTagBody: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta'],
+};
+
+// Init markdown-it with highlight.js + HTML support
 const md = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   typographer: true,
   highlight: function (str, lang) {
@@ -59,8 +93,9 @@ export function renderMarkdown(content) {
   const container = previewContent();
   if (!container) return;
   
-  // Render markdown
-  container.innerHTML = md.render(content || '');
+  // Render markdown with XSS filtering
+  const rawHtml = md.render(content || '');
+  container.innerHTML = xss(rawHtml, xssOptions);
   
   // Render mermaid diagrams with unique IDs
   const mermaidEls = container.querySelectorAll('.mermaid');

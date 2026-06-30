@@ -161,4 +161,29 @@ kbd { padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: monosp
 .toast-btn { padding: 4px 12px; border-radius: 4px; font-size: 12px; }
 @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
+/* ===== Details / Summary (Collapsible) ===== */
+.preview-content details {
+  border: 1px solid; border-radius: 6px; margin: 12px 0; padding: 0;
+  border-color: rgba(128,128,128,0.2);
+}
+.preview-content details summary {
+  padding: 8px 12px; cursor: pointer; font-weight: 500; user-select: none;
+  border-radius: 6px; transition: background 0.15s;
+}
+.preview-content details summary:hover {
+  background: rgba(128,128,128,0.1);
+}
+.preview-content details[open] summary {
+  border-bottom: 1px solid rgba(128,128,128,0.2);
+  border-radius: 6px 6px 0 0;
+}
+.preview-content details > *:not(summary) {
+  padding: 8px 12px;
+}
+
+/* ===== Task List ===== */
+.preview-content input[type="checkbox"] {
+  margin-right: 6px; accent-color: currentColor;
+}
+
 /* ===== Load themes ===== */

@@ -172,27 +172,27 @@ async function openFolderDialog() {
   }
 }
 
-// Window controls
+// Window controls (Tauri 2.0 - needs capabilities in default.json)
 function initWindowControls() {
   $('#btn-minimize')?.addEventListener('click', async () => {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      getCurrentWindow().minimize();
-    } catch {}
+      await getCurrentWindow().minimize();
+    } catch (e) { console.error('minimize failed:', e); }
   });
   $('#btn-maximize')?.addEventListener('click', async () => {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
       const win = getCurrentWindow();
       const maximized = await win.isMaximized();
-      maximized ? win.unmaximize() : win.maximize();
-    } catch {}
+      await (maximized ? win.unmaximize() : win.maximize());
+    } catch (e) { console.error('maximize failed:', e); }
   });
   $('#btn-close')?.addEventListener('click', async () => {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
-      getCurrentWindow().close();
-    } catch {}
+      await getCurrentWindow().close();
+    } catch (e) { console.error('close failed:', e); }
   });
 }
 

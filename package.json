@@ -15,7 +15,8 @@
     "@tauri-apps/plugin-fs": "^2.0.0",
     "markdown-it": "^14.0.0",
     "highlight.js": "^11.9.0",
-    "mermaid": "^10.9.0"
+    "mermaid": "^10.9.0",
+    "xss": "^1.0.15"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
